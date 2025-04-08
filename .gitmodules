@@ -1,0 +1,6 @@
+[submodule "backend"]
+	path = backend
+	url = https://github.com/MichalLukawski/ai-task-app-backend.git
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/MichalLukawski/ai-task-app-frontend.git
