@@ -21,6 +21,7 @@
 | `description` | String       | ✅        | -                | Opis zadania                         |
 | `notes`     | String         | ❌        | ""               | Notatki wygenerowane przez AI        |
 | `status`    | String         | ❌        | "open"           | Status: `open` lub `closed`          |
+| `dueDate`   | Date           | ❌        | null             | Termin wykonania zadania (opcjonalny)|
 | `createdAt` | Date           | ❌        | teraz            | Data utworzenia zadania              |
 | `closedAt`  | Date           | ❌        | -                | Data zamknięcia                      |
 

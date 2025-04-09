@@ -25,11 +25,13 @@ AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspoma
   - `authController.js` – rejestracja i logowanie użytkownika (z JWT i bcrypt)
   - `authRoutes.js` – routing do logowania i rejestracji
   - `User.js` – model użytkownika z rolą
-  - `Task.js` – model zadania z polami opis, status, daty, notatki
+  - `Task.js` – model zadania z polami: opis, status, daty, notatki, termin (`dueDate`)
   - `taskController.js` – CRUD zadań + zamknięcie
   - `taskRoutes.js` – routing do obsługi zadań
   - `middleware/auth.js` – middleware do weryfikacji JWT
+  - `middleware/validate.js` – middleware do obsługi błędów `express-validator`
   - `utils/responseHandler.js` – jednolity system odpowiedzi (`sendSuccess`, `sendError`)
+  - `validators/taskValidator.js` – walidacja pól `description`, `title`, `status`, `dueDate`
 
 - Brakuje:
   - integracji z GPT-4 (brak promptów, brak API OpenAI)
@@ -49,7 +51,7 @@ AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspoma
         ↓
 [ Frontend – React ]        ← brak
         ↓ axios/fetch
-[ Backend – Express ]       ← częściowo wdrożony
+[ Backend – Express ]       ← wdrożony w pełnym zakresie CRUD
         ↓
 [ MongoDB + GPT-4 API ]     ← brak integracji AI
 ```
@@ -58,9 +60,9 @@ AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspoma
 
 ## 🛠️ Technologie (wdrożone)
 
-- Backend: Node.js, Express, JWT, bcrypt, dotenv, CORS
+- Backend: Node.js, Express, JWT, bcrypt, dotenv, CORS, express-validator
 - Baza danych: MongoDB (konfiguracja w `db.js`)
-- Middleware: autoryzacja JWT, obsługa błędów, modularna struktura
+- Middleware: autoryzacja JWT, walidacja wejścia, obsługa błędów
 - Frontend: planowany (React + Tailwind)
 - AI: planowana integracja z OpenAI API (GPT-4)
 
@@ -72,6 +74,7 @@ AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspoma
 |----------------------------------|-----------|--------------|
 | Rejestracja i logowanie (JWT)   | ✅         | ✅ pełne     |
 | Tworzenie zadań z AI             | ✅         | ❌ brak       |
+| Obsługa terminów wykonania       | ✅         | ✅            |
 | Przeszukiwanie historii (AI)     | ✅         | ❌ brak       |
 | Frontend: dashboard              | ✅         | ❌ brak       |
 | Middleware do ról i ochrony      | ✅         | 🟡 JWT działa |
@@ -98,10 +101,11 @@ Dokumentacja techniczna i architektoniczna (stan na 2025-04-09):
 - `backend_overview.md` – opis folderów backendu i przepływów logiki
 - `project_roadmap.md` – status etapów implementacji
 - `project_overview.md` – ogólny kontekst projektu i jego aktualny stan
+- `validators.md`, `middleware.md`, `utils.md` – szczegółowe komponenty backendu
 
 ---
 
 ## 🧩 Wnioski
 
-Backend przeszedł z fazy MVP do etapu gotowości do testowania. Obsługuje pełny cykl życia użytkownika i zadania, z zachowaniem struktury, bezpieczeństwa i spójności odpowiedzi.  
+Backend przeszedł z fazy MVP do etapu gotowości do testowania i dalszego rozwoju. Obsługuje pełny cykl życia użytkownika i zadania, uwzględniając termin (`dueDate`), walidację oraz bezpieczeństwo.  
 Frontend i warstwa AI są gotowe do rozpoczęcia implementacji.

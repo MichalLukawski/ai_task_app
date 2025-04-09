@@ -22,15 +22,6 @@ Rejestracja nowego użytkownika.
 }
 ```
 
-- **Error Responses:**
-```json
-{
-  "status": "error",
-  "message": "Email already registered",
-  "code": "EMAIL_EXISTS"
-}
-```
-
 ---
 
 ### `POST /api/auth/login`
@@ -56,15 +47,6 @@ Logowanie użytkownika.
 }
 ```
 
-- **Error Responses:**
-```json
-{
-  "status": "error",
-  "message": "Invalid email or password",
-  "code": "INVALID_CREDENTIALS"
-}
-```
-
 ---
 
 ## 📘 API: Tasks
@@ -77,7 +59,9 @@ Tworzenie nowego zadania.
 - **Body:**
 ```json
 {
-  "description": "Nie działa API uczelni"
+  "description": "Nie działa API uczelni",
+  "title": "Awaria API",
+  "dueDate": "2025-05-01"
 }
 ```
 
@@ -88,8 +72,11 @@ Tworzenie nowego zadania.
   "message": "Task created successfully",
   "data": {
     "_id": "...",
-    "description": "Nie działa API uczelni",
+    "description": "...",
+    "title": "...",
     "status": "open",
+    "dueDate": "2025-05-01T00:00:00.000Z",
+    "createdAt": "...",
     ...
   }
 }
@@ -102,14 +89,6 @@ Tworzenie nowego zadania.
 Pobieranie listy zadań użytkownika.
 
 - **Headers:** `Authorization: Bearer <JWT>`
-- **Response:**
-```json
-{
-  "status": "success",
-  "message": "Tasks retrieved successfully",
-  "data": [ ... ]
-}
-```
 
 ---
 
@@ -118,13 +97,13 @@ Pobieranie listy zadań użytkownika.
 Aktualizacja zadania.
 
 - **Headers:** `Authorization: Bearer <JWT>`
-- **Body:** dowolne pola do zmiany (np. `description`, `title`)
-- **Response:**
+- **Body:**
 ```json
 {
-  "status": "success",
-  "message": "Task updated successfully",
-  "data": { ... }
+  "description": "Zaktualizowany opis",
+  "title": "Zaktualizowany tytuł",
+  "status": "closed",
+  "dueDate": "2025-05-10"
 }
 ```
 
@@ -134,16 +113,6 @@ Aktualizacja zadania.
 
 Zamykanie zadania.
 
-- **Headers:** `Authorization: Bearer <JWT>`
-- **Response:**
-```json
-{
-  "status": "success",
-  "message": "Task closed successfully",
-  "data": { ... }
-}
-```
-
 ---
 
 ## 📘 API: AI Assistant *(planowane)*
@@ -151,13 +120,6 @@ Zamykanie zadania.
 ### `POST /api/ai/similar-tasks`
 
 Porównanie problemu z historią zadań.
-
-- **Body:**
-```json
-{
-  "query": "Mam problem z autoryzacją JWT"
-}
-```
 
 ---
 
@@ -180,7 +142,7 @@ Sprawdzenie działania backendu i połączenia z bazą.
 
 - `project_overview.md`
 - `backend_overview.md`
-- `controllers.md`
+- `api_spec.md`
+- `validators.md`
 - `middleware.md`
 - `utils.md`
-- `project_roadmap.md`

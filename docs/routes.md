@@ -13,14 +13,14 @@
 
 Wszystkie poniższe trasy **wymagają autoryzacji JWT** (middleware `auth.js`).
 
-| Metoda | Ścieżka                | Opis                                         |
-|--------|------------------------|----------------------------------------------|
-| POST   | `/api/tasks`           | Tworzy nowe zadanie                          |
-| GET    | `/api/tasks`           | Pobiera wszystkie zadania użytkownika       |
-| PUT    | `/api/tasks/:id`       | Edytuje dane istniejącego zadania           |
-| POST   | `/api/tasks/:id/close` | Zamyka zadanie (ustawia status + closedAt)  |
+| Metoda | Ścieżka                | Opis                                         | Middleware                             |
+|--------|------------------------|----------------------------------------------|----------------------------------------|
+| POST   | `/api/tasks`           | Tworzy nowe zadanie                          | `auth.js`, `validateTaskInput`, `validate.js` |
+| GET    | `/api/tasks`           | Pobiera wszystkie zadania użytkownika       | `auth.js`                              |
+| PUT    | `/api/tasks/:id`       | Edytuje dane istniejącego zadania           | `auth.js`, `validateTaskInput`, `validate.js` |
+| POST   | `/api/tasks/:id/close` | Zamyka zadanie (ustawia status + closedAt)  | `auth.js`                              |
 
 ---
 
-Każda trasa dla zadań przekazuje kontrolę do funkcji z `taskController.js` i jest chroniona przez `authMiddleware`.
+Każda trasa dla zadań przekazuje kontrolę do funkcji z `taskController.js`, a wybrane trasy (`POST`, `PUT`) są dodatkowo chronione przez walidatory `express-validator`.
 

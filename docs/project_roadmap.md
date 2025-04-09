@@ -15,12 +15,14 @@
 ## 🚀 Etap 1: System zadań (**ZREALIZOWANE**)
 
 - [x] Model `Task.js` z polami: opis, status, daty, notatki AI
+- [x] Dodanie pola `dueDate` (termin wykonania) + obsługa
 - [x] Endpoint `POST /api/tasks` – tworzenie zadania
 - [x] Endpoint `POST /api/tasks/:id/close` – zamknięcie z AI
 - [x] Endpoint `GET /api/tasks` – lista zadań użytkownika
 - [x] Endpoint `PUT /api/tasks/:id` – edycja
 - [x] Autoryzacja i filtracja po `ownerId`
-- [x] Middleware autoryzacyjny (`auth.js`)
+- [x] Walidacja pól (`express-validator`)
+- [x] Middleware `validate.js` i `taskValidator.js`
 
 ---
 
@@ -68,6 +70,5 @@
 
 ## 🔚 Podsumowanie
 
-Projekt wyszedł z fazy fundamentu backendu – zrealizowano pełny system uwierzytelniania, modelowanie i obsługę zadań oraz odpowiedzi API.  
-Kolejny etap to integracja z GPT (etap 2) i implementacja frontendu (etap 4).
-
+Etap 1 został w pełni zakończony – system zadań zawiera model `Task` z polem `dueDate`, walidację, obsługę CRUD i bezpieczeństwo.  
+Kolejny etap to integracja AI (etap 2) i implementacja frontendu (etap 4).
