@@ -89,6 +89,9 @@ const response = await openai.createChatCompletion({
 
 ## 📄 Dokumentacja powiązana
 
-- `backend_overview.md` – jak AI jest używane przez API
-- `frontend_overview.md` – jak frontend wysyła żądania do GPT
-- `project_overview.md` – pełna architektura i wizja systemu
+- `project_overview.md` – pełny kontekst projektu, cele, architektura, repozytoria, AI, modularność
+- `backend_overview.md` – opis struktury backendu, endpointów, technologii i modelu autoryzacji
+- `frontend_overview.md` – opis frontendu, komponentów, architektury, interfejsów użytkownika
+- `api_spec.md` – specyfikacja endpointów REST API (auth, tasks, AI), dane wejściowe/wyjściowe
+- `ai_integration.md` – jak GPT-4 wspiera zadania: tworzenie, ocena, zamykanie, priorytetyzacja
+- `project_roadmap.md` – roadmapa projektu: fazy rozwoju, MVP, AI, skalowanie, funkcje zespołowe
