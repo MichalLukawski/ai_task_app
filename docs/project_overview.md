@@ -1,163 +1,107 @@
-# AI Task App – Dokumentacja techniczna (backend + rozwój)
+# AI Task App – Realistyczny przegląd projektu (stan na podstawie kodu)
 
-## 📘 Wstęp
+## 📘 Opis ogólny projektu
 
-AI Task App to osobista aplikacja webowa wspierana przez sztuczną inteligencję (GPT), która wspomaga użytkowników technicznych (np. programistów, administratorów IT) w zarządzaniu zadaniami, dokumentowaniu wiedzy oraz wyszukiwaniu podobnych problemów z przeszłości.
-
-System opiera się na architekturze klient-serwer, z backendem zrealizowanym w Node.js (Express) i bazą danych MongoDB. Celem projektu jest stworzenie narzędzia, które może służyć nie tylko indywidualnym użytkownikom, ale również zespołom i firmom.
+AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspomaganie osób technicznych (programistów, administratorów IT, naukowców) w zarządzaniu zadaniami, dokumentowaniu problemów oraz wyszukiwaniu podobnych sytuacji z przeszłości. Architektura przewiduje osobne moduły dla backendu (Node.js/Express) i frontend (React), z integracją AI poprzez OpenAI API.
 
 ---
 
-## 🎯 Cel dokumentacji
+## 🎯 Cele techniczne (wg założeń)
 
-Dokumentacja ma służyć jako:
-
-- Kompendium wiedzy o strukturze backendu,
-- Podstawa do współpracy z GPT (prompt inżynieryjny),
-- Pomoc przy rozwoju i utrzymaniu aplikacji w przyszłości.
+- Rejestracja i logowanie użytkownika (JWT)
+- Tworzenie zadań wspieranych przez GPT-4
+- Przeszukiwanie historii zadań przez AI
+- Frontendowy dashboard do zarządzania zadaniami
+- Skalowalność dla zespołów i organizacji
+- Przechowywanie danych w MongoDB (lokalnie i w chmurze)
 
 ---
 
-## 🔧 1. Konfiguracja środowiska backendu
+## 📌 Faktyczny stan implementacji
 
-Projekt został zainicjalizowany za pomocą `npm init -y`. Następnie zainstalowano:
+### ✅ Backend:
+
+- Zrealizowano:
+  - `authController.js` – rejestracja i logowanie użytkownika (z JWT i bcrypt)
+  - `authRoutes.js` – routing do logowania i rejestracji
+  - `User.js` – model użytkownika z rolą
+  - `Task.js` – model zadania z polami opis, status, daty, notatki
+  - `taskController.js` – CRUD zadań + zamknięcie
+  - `taskRoutes.js` – routing do obsługi zadań
+  - `middleware/auth.js` – middleware do weryfikacji JWT
+  - `utils/responseHandler.js` – jednolity system odpowiedzi (`sendSuccess`, `sendError`)
+
+- Brakuje:
+  - integracji z GPT-4 (brak promptów, brak API OpenAI)
+  - semantycznego porównywania (`/api/ai/similar-tasks`)
+
+### ❌ Frontend:
+
+- Frontend nie istnieje – brak plików React (`src/`, `components/`, `pages/`, itd.)
+- Obecny jest tylko szkielet z `README.md`
+
+---
+
+## 🧠 Architektura logiczna
 
 ```
-express, mongoose, dotenv, bcrypt, jsonwebtoken, cors
-```
-
-### Utworzone pliki:
-
-- `server.js` – punkt wejścia, tworzy serwer Express,
-- `config/db.js` – połączenie z MongoDB,
-- `.env` i `.env.example` – konfiguracja środowiskowa.
-
----
-
-## 🗃️ 2. Połączenie z MongoDB
-
-W `config/db.js` użyto `mongoose.connect()` do połączenia z bazą danych. W przypadku błędu:
-
-- logowany jest komunikat,
-- aplikacja nie uruchamia się (`process.exit(1)`).
-
-Po poprawnym połączeniu uruchamiany jest serwer.
-
----
-
-## 📂 3. Modularna struktura katalogów
-
-```
-backend/
-├── config/         # Połączenie z MongoDB
-├── controllers/    # Logika endpointów
-├── models/         # Schematy danych (np. User)
-├── routes/         # Endpointy Express (np. authRoutes.js)
-├── utils/          # Narzędzia pomocnicze (np. responseHandler)
+[ User (przeglądarka) ]
+        ↓
+[ Frontend – React ]        ← brak
+        ↓ axios/fetch
+[ Backend – Express ]       ← częściowo wdrożony
+        ↓
+[ MongoDB + GPT-4 API ]     ← brak integracji AI
 ```
 
 ---
 
-## 🔐 4. Rejestracja użytkownika (API)
+## 🛠️ Technologie (wdrożone)
 
-### Endpoint:
-
-```
-POST /api/auth/register
-```
-
-### Proces:
-
-1. Sprawdzenie, czy użytkownik istnieje,
-2. Jeśli nie: tworzenie nowego użytkownika,
-3. Hashowanie hasła (`bcrypt`) w hooku `pre('save')`,
-4. Zapis do kolekcji `users`,
-5. Odpowiedź JSON (`success` / `error`).
+- Backend: Node.js, Express, JWT, bcrypt, dotenv, CORS
+- Baza danych: MongoDB (konfiguracja w `db.js`)
+- Middleware: autoryzacja JWT, obsługa błędów, modularna struktura
+- Frontend: planowany (React + Tailwind)
+- AI: planowana integracja z OpenAI API (GPT-4)
 
 ---
 
-## 📈 5. Planowane funkcjonalności backendu
+## 🚧 Roadmapa – porównanie planu z realizacją
 
-- **Logowanie i JWT** (`/api/auth/login`)
-- **Middleware autoryzacyjny** (`requireAuth`, `requireRole`)
-- **CRUD dla zadań** (`/api/tasks`)
-- **Model GPT jako asystent**:
-  - generowanie struktury zadania,
-  - podsumowanie rozwiązania,
-  - sortowanie po trudności, terminie, pilności,
-  - proponowanie kolejności realizacji,
-  - wyszukiwanie zadań podobnych do aktualnego opisu
-- **Endpointy pomocnicze** (`/api/health`)
-- **Wsparcie dla organizacji i zespołów** (`organizationId`, `teamId`)
-- **Statystyki kliknięć (dashboard + hasło)**
+| Funkcja                          | Planowane | Zrealizowane |
+|----------------------------------|-----------|--------------|
+| Rejestracja i logowanie (JWT)   | ✅         | ✅ pełne     |
+| Tworzenie zadań z AI             | ✅         | ❌ brak       |
+| Przeszukiwanie historii (AI)     | ✅         | ❌ brak       |
+| Frontend: dashboard              | ✅         | ❌ brak       |
+| Middleware do ról i ochrony      | ✅         | 🟡 JWT działa |
+| Semantyczne porównanie           | ✅         | ❌ brak       |
+| Klucz API + integracja GPT       | ✅         | ❌ brak       |
 
 ---
 
-## 🌐 6. Frontend – założenia
+## 📦 Repozytoria i struktura
 
-Frontend rozwijany osobno (repozytorium: `ai-task-app-frontend`) – React + TailwindCSS.
-
-### Planowane funkcje:
-
-- Rejestracja i logowanie,
-- Widok zadań i szczegółów,
-- Formularz do tworzenia zadań wspomagany GPT,
-- Przegląd historii i statystyk,
-- Panel administratora,
-- Ukryty dostęp do dashboardu przez ikonę + hasło.
+- `ai-task-app/` – główne repo, zawiera submoduły:
+  - `backend/` – pełna obsługa użytkowników i zadań
+  - `frontend/` – puste repozytorium React (do implementacji)
+  - `docs/` – dokumentacja projektu `.md`
 
 ---
 
-## 🤖 7. Integracja z GPT
+## 📄 Dokumentacja
 
-- Użytkownik podaje własny klucz OpenAI (zapisany zaszyfrowany),
-- GPT generuje: strukturę zadania, podsumowanie wykonania, ocenę trudności,
-- Możliwe integracje: klasyczny prompt, embeddingi (do semantycznego przeszukiwania).
+Dokumentacja techniczna i architektoniczna (stan na 2025-04-09):
 
----
-
-## 🔁 8. Repozytoria i architektura submodułów
-
-- `ai-task-app` – główne repo z dokumentacją i submodułami,
-- `ai-task-app-backend` – backend Node.js (Express + MongoDB),
-- `ai-task-app-frontend` – frontend React.
-
-Submoduły dodane przez `.gitmodules`, obsługiwane przez:
-
-```bash
-git submodule update --init --recursive
-```
+- `prompt.md` – główny plik inżynierii promptów
+- `api_spec.md` – specyfikacja API (auth, tasks, AI)
+- `backend_overview.md` – opis folderów backendu i przepływów logiki
+- `project_roadmap.md` – status etapów implementacji
+- `project_overview.md` – ogólny kontekst projektu i jego aktualny stan
 
 ---
 
-## 📄 9. Dokumentacja i prompt GPT
+## 🧩 Wnioski
 
-Wszystkie dokumenty `.md` i `.docx` znajdują się w folderze `docs/`.
-
-Służą jako:
-- pomoc programistyczna,
-- podstawa do budowania promptów dla ChatGPT (np. “Jak działa auth?”),
-- baza wiedzy o projekcie.
-
----
-
-## 🧠 10. Perspektywa rozwoju (skala korporacyjna)
-
-Stack technologiczny (Node.js + MongoDB) jest wystarczający dla aplikacji obsługującej do 1000 pracowników, pod warunkiem:
-
-- zastosowania dobrego indeksowania w Mongo,
-- rozdzielenia zadań na organizacje / zespoły,
-- użycia kolejek (np. do GPT),
-- modularności kodu,
-- możliwej przyszłej migracji do TypeScript lub ASP.NET Core + PostgreSQL (jeśli wymagane relacje, raportowanie, audyt).
-
----
-
-## 📄 Dokumentacja powiązana
-
-- `project_overview.md` – pełny kontekst projektu, cele, architektura, repozytoria, AI, modularność
-- `backend_overview.md` – opis struktury backendu, endpointów, technologii i modelu autoryzacji
-- `frontend_overview.md` – opis frontendu, komponentów, architektury, interfejsów użytkownika
-- `api_spec.md` – specyfikacja endpointów REST API (auth, tasks, AI), dane wejściowe/wyjściowe
-- `ai_integration.md` – jak GPT-4 wspiera zadania: tworzenie, ocena, zamykanie, priorytetyzacja
-- `project_roadmap.md` – roadmapa projektu: fazy rozwoju, MVP, AI, skalowanie, funkcje zespołowe
+Backend przeszedł z fazy MVP do etapu gotowości do testowania. Obsługuje pełny cykl życia użytkownika i zadania, z zachowaniem struktury, bezpieczeństwa i spójności odpowiedzi.  
+Frontend i warstwa AI są gotowe do rozpoczęcia implementacji.

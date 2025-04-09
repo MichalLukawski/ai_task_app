@@ -7,7 +7,6 @@
 Rejestracja nowego użytkownika.
 
 - **Body (JSON):**
-
 ```json
 {
   "email": "user@example.com",
@@ -16,7 +15,6 @@ Rejestracja nowego użytkownika.
 ```
 
 - **Success Response:**
-
 ```json
 {
   "status": "success",
@@ -25,7 +23,6 @@ Rejestracja nowego użytkownika.
 ```
 
 - **Error Responses:**
-
 ```json
 {
   "status": "error",
@@ -36,12 +33,11 @@ Rejestracja nowego użytkownika.
 
 ---
 
-### `POST /api/auth/login` *(planowane)*
+### `POST /api/auth/login`
 
 Logowanie użytkownika.
 
 - **Body (JSON):**
-
 ```json
 {
   "email": "user@example.com",
@@ -50,19 +46,28 @@ Logowanie użytkownika.
 ```
 
 - **Success Response:**
-
 ```json
 {
   "status": "success",
-  "token": "JWT_TOKEN_HERE"
+  "message": "Login successful",
+  "data": {
+    "token": "JWT_TOKEN_HERE"
+  }
 }
 ```
 
-- **Error Responses:** Nieprawidłowy e-mail/hasło, konto nie istnieje
+- **Error Responses:**
+```json
+{
+  "status": "error",
+  "message": "Invalid email or password",
+  "code": "INVALID_CREDENTIALS"
+}
+```
 
 ---
 
-## 📘 API: Tasks *(planowane)*
+## 📘 API: Tasks
 
 ### `POST /api/tasks`
 
@@ -70,23 +75,22 @@ Tworzenie nowego zadania.
 
 - **Headers:** `Authorization: Bearer <JWT>`
 - **Body:**
-
 ```json
 {
   "description": "Nie działa API uczelni"
 }
 ```
 
-- **Response:**
-
+- **Success Response:**
 ```json
 {
   "status": "success",
+  "message": "Task created successfully",
   "data": {
-    "title": "Problem z integracją z API uczelni",
-    "notes": "...",
-    "dueDate": "2025-04-15",
-    "difficulty": "medium"
+    "_id": "...",
+    "description": "Nie działa API uczelni",
+    "status": "open",
+    ...
   }
 }
 ```
@@ -95,13 +99,17 @@ Tworzenie nowego zadania.
 
 ### `GET /api/tasks`
 
-Pobieranie listy zadań użytkownika (z paginacją, filtrowaniem).
+Pobieranie listy zadań użytkownika.
 
----
-
-### `GET /api/tasks/:id`
-
-Pobranie szczegółów konkretnego zadania.
+- **Headers:** `Authorization: Bearer <JWT>`
+- **Response:**
+```json
+{
+  "status": "success",
+  "message": "Tasks retrieved successfully",
+  "data": [ ... ]
+}
+```
 
 ---
 
@@ -109,11 +117,32 @@ Pobranie szczegółów konkretnego zadania.
 
 Aktualizacja zadania.
 
+- **Headers:** `Authorization: Bearer <JWT>`
+- **Body:** dowolne pola do zmiany (np. `description`, `title`)
+- **Response:**
+```json
+{
+  "status": "success",
+  "message": "Task updated successfully",
+  "data": { ... }
+}
+```
+
 ---
 
 ### `POST /api/tasks/:id/close`
 
-Zamykanie zadania z pomocą GPT (generowanie podsumowania).
+Zamykanie zadania.
+
+- **Headers:** `Authorization: Bearer <JWT>`
+- **Response:**
+```json
+{
+  "status": "success",
+  "message": "Task closed successfully",
+  "data": { ... }
+}
+```
 
 ---
 
@@ -121,7 +150,7 @@ Zamykanie zadania z pomocą GPT (generowanie podsumowania).
 
 ### `POST /api/ai/similar-tasks`
 
-Zwraca zadania najbardziej podobne do opisu problemu.
+Porównanie problemu z historią zadań.
 
 - **Body:**
 ```json
@@ -130,44 +159,28 @@ Zwraca zadania najbardziej podobne do opisu problemu.
 }
 ```
 
-- **Response:**
-```json
-{
-  "matches": [
-    { "title": "JWT token expired", "solution": "...", "date": "2025-03-01" }
-  ]
-}
-```
-
 ---
 
-### `POST /api/ai/plan-order`
-
-GPT proponuje kolejność wykonania zadań wg trudności, pilności, deadline.
-
----
-
-## 📘 API: System *(planowane)*
+## 📘 API: System
 
 ### `GET /api/health`
 
-Sprawdza czy API działa, połączenie z Mongo i konfiguracja środowiska.
+Sprawdzenie działania backendu i połączenia z bazą.
 
 ---
 
 ## 🛡️ Autoryzacja
 
 - Wszystkie trasy `tasks/`, `ai/` wymagają tokena JWT w nagłówku `Authorization`
-- Użytkownik musi być zalogowany
-- Role `admin`, `user` (middleware `requireRole`)
+- Token dekodowany przez middleware `auth.js`
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `project_overview.md` – pełny kontekst projektu, cele, architektura, repozytoria, AI, modularność
-- `backend_overview.md` – opis struktury backendu, endpointów, technologii i modelu autoryzacji
-- `frontend_overview.md` – opis frontendu, komponentów, architektury, interfejsów użytkownika
-- `api_spec.md` – specyfikacja endpointów REST API (auth, tasks, AI), dane wejściowe/wyjściowe
-- `ai_integration.md` – jak GPT-4 wspiera zadania: tworzenie, ocena, zamykanie, priorytetyzacja
-- `project_roadmap.md` – roadmapa projektu: fazy rozwoju, MVP, AI, skalowanie, funkcje zespołowe
+- `project_overview.md`
+- `backend_overview.md`
+- `controllers.md`
+- `middleware.md`
+- `utils.md`
+- `project_roadmap.md`

@@ -16,10 +16,11 @@
 ```
 backend/
 ├── config/           # Konfiguracja połączenia z MongoDB
-├── controllers/      # Logika endpointów
-├── models/           # Schematy danych (np. User)
-├── routes/           # Endpointy API
-├── utils/            # Funkcje pomocnicze (np. responseHandler)
+├── controllers/      # Logika endpointów: authController, taskController
+├── models/           # Schematy danych: User, Task
+├── routes/           # Endpointy API: authRoutes, taskRoutes
+├── middleware/       # Obsługa JWT (auth.js), walidacja (planowana)
+├── utils/            # Funkcje pomocnicze: responseHandler
 ├── .env              # Zmienne środowiskowe (lokalne)
 ├── server.js         # Główna aplikacja Express
 └── .gitignore
@@ -27,70 +28,81 @@ backend/
 
 ---
 
-## 📦 Endpointy (aktualne)
+## 📦 Endpointy (zrealizowane)
 
-| Metoda | Endpoint              | Opis                         |
-|--------|------------------------|------------------------------|
-| POST   | /api/auth/register     | Rejestracja użytkownika      |
-| (plan) | /api/auth/login        | Logowanie i JWT              |
-| (plan) | /api/tasks             | Tworzenie zadania            |
-| (plan) | /api/tasks/:id         | Edycja / zamknięcie zadania  |
-
----
-
-## 🔐 Rejestracja użytkownika
-
-- Endpoint: `POST /api/auth/register`
-- Proces:
-  1. Sprawdzenie, czy e-mail już istnieje
-  2. Hashowanie hasła (`bcrypt`)
-  3. Zapis do kolekcji `users`
-  4. Odpowiedź JSON (`success` / `error`)
-
-- Hasło hashowane w `UserSchema.pre('save')`
-- Komunikaty spójne dzięki `sendSuccess()` / `sendError()` z `utils/responseHandler.js`
+| Metoda | Endpoint                 | Opis                          |
+|--------|--------------------------|-------------------------------|
+| POST   | /api/auth/register       | Rejestracja użytkownika       |
+| POST   | /api/auth/login          | Logowanie i zwrot tokena JWT |
+| POST   | /api/tasks               | Tworzenie zadania             |
+| GET    | /api/tasks               | Lista zadań użytkownika       |
+| PUT    | /api/tasks/:id           | Edycja zadania                |
+| POST   | /api/tasks/:id/close     | Zamykanie zadania (AI: plan)  |
 
 ---
 
-## ⚙️ Middleware (planowane)
+## 🔐 Rejestracja i logowanie
 
-- `requireAuth` – autoryzacja tokenem JWT
-- `requireRole('admin')` – kontrola ról
-- `validateInput` – walidacja danych wejściowych
+- Rejestracja:
+  - Sprawdzenie, czy email istnieje
+  - Hashowanie hasła (`bcrypt`)
+  - Zapis do `User`
+  - Odpowiedź: `sendSuccess` lub `sendError`
+
+- Logowanie:
+  - Weryfikacja danych
+  - Generowanie JWT (`jsonwebtoken`)
+  - Middleware sprawdzający token (`auth.js`)
+
+---
+
+## 🧩 Middleware
+
+- `auth.js` – middleware JWT: sprawdza `Authorization: Bearer`, dekoduje `req.user`
+- `validate.js` – planowany: walidacja danych wejściowych (`express-validator`)
+- `requireRole.js` – planowany: kontrola ról (admin/user)
+
+---
+
+## 🧰 Utils
+
+- `responseHandler.js` – funkcje `sendSuccess` i `sendError`:
+  - Ujednolicone odpowiedzi API w całej aplikacji
+  - Wspiera kodowanie komunikatów i statusów błędów
 
 ---
 
 ## 🔗 Połączenie z MongoDB
 
-Zrealizowane w pliku `config/db.js`:
-
-- Użycie `mongoose.connect(process.env.MONGO_URI)`
+W pliku `config/db.js`:
+- `mongoose.connect(process.env.MONGO_URI)`
 - W razie błędu: `process.exit(1)`
-- Serwer startuje dopiero po poprawnym połączeniu
+- Serwer startuje dopiero po połączeniu z bazą
 
 ---
 
-## 🔒 Autoryzacja (planowana)
+## 🔐 Autoryzacja
 
-- JWT podpisywany kluczem z `.env`
-- Token przesyłany w nagłówku `Authorization: Bearer`
-- Middleware `requireAuth` będzie weryfikował token i dodawał `req.user`
+- JWT generowane przy logowaniu (`/api/auth/login`)
+- Token wymagany w trasach `/api/tasks`
+- Token przesyłany w nagłówku: `Authorization: Bearer <token>`
 
 ---
 
 ## 🧪 Testy (planowane)
 
-- Framework: Jest + Supertest
-- Testy rejestracji, logowania, endpointów zadań
-- Osobna baza danych testowa (np. `ai-task-app-test`)
+- Testy jednostkowe z użyciem `Jest` + `Supertest`
+- Mockowanie MongoDB (np. z `mongodb-memory-server`)
+- Testy: rejestracja, logowanie, CRUD zadań
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `project_overview.md` – pełny kontekst projektu, cele, architektura, repozytoria, AI, modularność
-- `backend_overview.md` – opis struktury backendu, endpointów, technologii i modelu autoryzacji
-- `frontend_overview.md` – opis frontendu, komponentów, architektury, interfejsów użytkownika
-- `api_spec.md` – specyfikacja endpointów REST API (auth, tasks, AI), dane wejściowe/wyjściowe
-- `ai_integration.md` – jak GPT-4 wspiera zadania: tworzenie, ocena, zamykanie, priorytetyzacja
-- `project_roadmap.md` – roadmapa projektu: fazy rozwoju, MVP, AI, skalowanie, funkcje zespołowe
+- `project_overview.md` – ogólny kontekst projektu i status implementacji
+- `api_spec.md` – specyfikacja REST API (auth, tasks, AI)
+- `utils.md` – dokumentacja `sendSuccess` / `sendError`
+- `middleware.md` – opis middleware JWT i planowane walidacje
+- `controllers.md` – opis logiki endpointów (auth, tasks)
+- `project_roadmap.md` – etapy rozwoju backendu i dalsze plany
+
