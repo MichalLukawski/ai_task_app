@@ -2,14 +2,14 @@
 
 ## 📘 Opis ogólny projektu
 
-AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspomaganie osób technicznych (programistów, administratorów IT, naukowców) w zarządzaniu zadaniami, dokumentowaniu problemów oraz wyszukiwaniu podobnych sytuacji z przeszłości. Architektura przewiduje osobne moduły dla backendu (Node.js/Express) i frontend (React), z integracją AI poprzez OpenAI API.
+AI Task App to aplikacja webowa wspierana przez GPT-4o, której celem jest wspomaganie osób technicznych (programistów, administratorów IT, naukowców) w zarządzaniu zadaniami, dokumentowaniu problemów oraz wyszukiwaniu podobnych sytuacji z przeszłości. Architektura przewiduje osobne moduły dla backendu (Node.js/Express) i frontend (React), z integracją AI poprzez OpenAI API.
 
 ---
 
 ## 🎯 Cele techniczne (wg założeń)
 
 - Rejestracja i logowanie użytkownika (JWT)
-- Tworzenie zadań wspieranych przez GPT-4
+- Tworzenie zadań wspieranych przez GPT
 - Przeszukiwanie historii zadań przez AI
 - Frontendowy dashboard do zarządzania zadaniami
 - Skalowalność dla zespołów i organizacji
@@ -26,18 +26,21 @@ AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspoma
   - `authRoutes.js` – routing do logowania i rejestracji
   - `User.js` – model użytkownika z rolą
   - `Task.js` – model zadania z polami: opis, status, daty, notatki, termin (`dueDate`)
-  - `taskController.js` – CRUD zadań + zamknięcie
-  - `taskRoutes.js` – routing do obsługi zadań
-  - `middleware/auth.js` – middleware do weryfikacji JWT
-  - `middleware/validate.js` – middleware do obsługi błędów `express-validator`
-  - `utils/responseHandler.js` – jednolity system odpowiedzi (`sendSuccess`, `sendError`)
-  - `validators/taskValidator.js` – walidacja pól `description`, `title`, `status`, `dueDate`
+  - `taskController.js` – CRUD zadań + zamknięcie + tworzenie z AI (`createWithAI`)
+  - `taskRoutes.js` – routing do obsługi zadań, w tym `/ai-create`
+  - `services/gptService.js` – integracja z OpenAI API (GPT-4o)
+  - `middleware/auth.js`, `validate.js` – autoryzacja i walidacja
+  - `utils/responseHandler.js` – jednolity system odpowiedzi
+  - `validators/taskValidator.js` – walidacja pól zadania
+  - `prettier.config.js` – ujednolicenie stylu kodu w całym backendzie
 
 - Brakuje:
-  - integracji z GPT-4 (brak promptów, brak API OpenAI)
   - semantycznego porównywania (`/api/ai/similar-tasks`)
+  - frontendowego UI dla widoku tasków (planowane)
 
-### ❌ Frontend:
+---
+
+## ❌ Frontend:
 
 - Frontend nie istnieje – brak plików React (`src/`, `components/`, `pages/`, itd.)
 - Obecny jest tylko szkielet z `README.md`
@@ -49,63 +52,56 @@ AI Task App to aplikacja webowa wspierana przez GPT-4, której celem jest wspoma
 ```
 [ User (przeglądarka) ]
         ↓
-[ Frontend – React ]        ← brak
+[ Frontend – React ]        ← planowane
         ↓ axios/fetch
-[ Backend – Express ]       ← wdrożony w pełnym zakresie CRUD
+[ Backend – Express ]       ← pełna logika (auth, tasks, AI)
         ↓
-[ MongoDB + GPT-4 API ]     ← brak integracji AI
+[ MongoDB + GPT-4o API ]    ← działa od wersji 0.0.6
 ```
 
 ---
 
 ## 🛠️ Technologie (wdrożone)
 
-- Backend: Node.js, Express, JWT, bcrypt, dotenv, CORS, express-validator
-- Baza danych: MongoDB (konfiguracja w `db.js`)
-- Middleware: autoryzacja JWT, walidacja wejścia, obsługa błędów
+- Backend: Node.js, Express, JWT, bcrypt, dotenv, express-validator
+- Baza danych: MongoDB (lokalna i chmurowa)
+- AI: OpenAI GPT-4o (`openai` SDK)
+- Formatowanie: Prettier
 - Frontend: planowany (React + Tailwind)
-- AI: planowana integracja z OpenAI API (GPT-4)
 
 ---
 
 ## 🚧 Roadmapa – porównanie planu z realizacją
 
-| Funkcja                          | Planowane | Zrealizowane |
-|----------------------------------|-----------|--------------|
-| Rejestracja i logowanie (JWT)   | ✅         | ✅ pełne     |
-| Tworzenie zadań z AI             | ✅         | ❌ brak       |
-| Obsługa terminów wykonania       | ✅         | ✅            |
-| Przeszukiwanie historii (AI)     | ✅         | ❌ brak       |
-| Frontend: dashboard              | ✅         | ❌ brak       |
-| Middleware do ról i ochrony      | ✅         | 🟡 JWT działa |
-| Semantyczne porównanie           | ✅         | ❌ brak       |
-| Klucz API + integracja GPT       | ✅         | ❌ brak       |
+| Funkcja                          | Planowane | Zrealizowane         |
+|----------------------------------|-----------|----------------------|
+| Rejestracja i logowanie (JWT)   | ✅         | ✅ pełne             |
+| Tworzenie zadań z AI             | ✅         | ✅ (`POST /ai-create`) |
+| Obsługa terminów wykonania       | ✅         | ✅                   |
+| Przeszukiwanie historii (AI)     | ✅         | ❌ brak              |
+| Frontend: dashboard              | ✅         | ❌ brak              |
+| Middleware do ról i ochrony      | ✅         | 🟡 JWT działa        |
+| Semantyczne porównanie           | ✅         | ❌ brak              |
+| Klucz API + integracja GPT       | ✅         | ✅                   |
 
 ---
 
-## 📦 Repozytoria i struktura
+## 🔄 Historia wersji
 
-- `ai-task-app/` – główne repo, zawiera submoduły:
-  - `backend/` – pełna obsługa użytkowników i zadań
-  - `frontend/` – puste repozytorium React (do implementacji)
-  - `docs/` – dokumentacja projektu `.md`
+### v0.0.6 – 2025-04-10
+
+- Dodano integrację GPT-4o do backendu
+- Nowy endpoint: `POST /api/tasks/ai-create`
+- Moduł `gptService.js` i obsługa błędów OpenAI
+- Formatowanie kodu z Prettier (`prettier.config.js`)
+- Wersja gotowa do testów i dalszego rozwoju AI
 
 ---
 
 ## 📄 Dokumentacja
 
-Dokumentacja techniczna i architektoniczna (stan na 2025-04-09):
-
-- `prompt.md` – główny plik inżynierii promptów
-- `api_spec.md` – specyfikacja API (auth, tasks, AI)
-- `backend_overview.md` – opis folderów backendu i przepływów logiki
-- `project_roadmap.md` – status etapów implementacji
 - `project_overview.md` – ogólny kontekst projektu i jego aktualny stan
-- `validators.md`, `middleware.md`, `utils.md` – szczegółowe komponenty backendu
-
----
-
-## 🧩 Wnioski
-
-Backend przeszedł z fazy MVP do etapu gotowości do testowania i dalszego rozwoju. Obsługuje pełny cykl życia użytkownika i zadania, uwzględniając termin (`dueDate`), walidację oraz bezpieczeństwo.  
-Frontend i warstwa AI są gotowe do rozpoczęcia implementacji.
+- `backend_overview.md` – opis struktury backendu i przepływów logiki
+- `api_spec.md` – specyfikacja endpointów REST API
+- `validators.md`, `middleware.md`, `utils.md` – dokumentacja komponentów pomocniczych
+- `project_roadmap.md` – status etapów implementacji

@@ -19,8 +19,9 @@ Wszystkie poniższe trasy **wymagają autoryzacji JWT** (middleware `auth.js`).
 | GET    | `/api/tasks`           | Pobiera wszystkie zadania użytkownika       | `auth.js`                              |
 | PUT    | `/api/tasks/:id`       | Edytuje dane istniejącego zadania           | `auth.js`, `validateTaskInput`, `validate.js` |
 | POST   | `/api/tasks/:id/close` | Zamyka zadanie (ustawia status + closedAt)  | `auth.js`                              |
+| POST   | `/api/tasks/ai-create` | Tworzy zadanie z pomocą GPT-4o               | `auth.js`                              |
 
 ---
 
 Każda trasa dla zadań przekazuje kontrolę do funkcji z `taskController.js`, a wybrane trasy (`POST`, `PUT`) są dodatkowo chronione przez walidatory `express-validator`.
-
+Trasa `/api/tasks/ai-create` wywołuje funkcję `createWithAI`, która wykorzystuje `gptService.js` do komunikacji z OpenAI.

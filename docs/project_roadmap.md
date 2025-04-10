@@ -26,11 +26,13 @@
 
 ---
 
-## 🤖 Etap 2: Integracja GPT (**DO ZROBIENIA**)
+## 🤖 Etap 2: Integracja GPT (**W TRAKCIE / CZĘŚCIOWO ZREALIZOWANE**)
 
+- [x] Połączenie z OpenAI API (model GPT-4o)
+- [x] Endpoint `POST /api/tasks/ai-create` – generowanie zadania
+- [x] Moduł `gptService.js`
+- [x] Obsługa błędów (np. brak modelu, limit, quota)
 - [ ] Przechowywanie i szyfrowanie klucza API
-- [ ] Połączenie z OpenAI API (model GPT-4)
-- [ ] Tworzenie tytułu/opisu zadania przez AI
 - [ ] Generowanie podsumowania przy zamykaniu zadania
 - [ ] Endpoint `POST /api/ai/similar-tasks`
 
@@ -70,5 +72,8 @@
 
 ## 🔚 Podsumowanie
 
-Etap 1 został w pełni zakończony – system zadań zawiera model `Task` z polem `dueDate`, walidację, obsługę CRUD i bezpieczeństwo.  
-Kolejny etap to integracja AI (etap 2) i implementacja frontendu (etap 4).
+Etap 1 został w pełni zakończony.  
+Wersja `0.0.6` zawiera pierwszą implementację integracji z GPT-4o:  
+moduł `gptService.js`, endpoint `POST /api/tasks/ai-create` oraz poprawne logowanie i obsługę błędów.
+
+Backend gotowy do dalszego rozwoju: generowanie podsumowań i porównań semantycznych.

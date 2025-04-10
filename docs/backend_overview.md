@@ -8,6 +8,8 @@
 - Bcrypt (hashowanie haseł)
 - Dotenv (zmienne środowiskowe)
 - CORS, middleware, modularna architektura
+- OpenAI (GPT-4o)
+- Prettier
 
 ---
 
@@ -19,25 +21,28 @@ backend/
 ├── controllers/      # Logika endpointów: authController, taskController
 ├── models/           # Schematy danych: User, Task
 ├── routes/           # Endpointy API: authRoutes, taskRoutes
-├── middleware/       # Obsługa JWT (auth.js), walidacja (planowana)
+├── middleware/       # Obsługa JWT (auth.js), walidacja (validate.js)
+├── services/         # Integracja z GPT: gptService.js
 ├── utils/            # Funkcje pomocnicze: responseHandler
+├── validators/       # Walidacja pól (express-validator)
+├── prettier.config.js# Konfiguracja formatowania kodu
 ├── .env              # Zmienne środowiskowe (lokalne)
-├── server.js         # Główna aplikacja Express
-└── .gitignore
+└── server.js         # Główna aplikacja Express
 ```
 
 ---
 
 ## 📦 Endpointy (zrealizowane)
 
-| Metoda | Endpoint                 | Opis                          |
-|--------|--------------------------|-------------------------------|
-| POST   | /api/auth/register       | Rejestracja użytkownika       |
-| POST   | /api/auth/login          | Logowanie i zwrot tokena JWT |
-| POST   | /api/tasks               | Tworzenie zadania             |
-| GET    | /api/tasks               | Lista zadań użytkownika       |
-| PUT    | /api/tasks/:id           | Edycja zadania                |
-| POST   | /api/tasks/:id/close     | Zamykanie zadania (AI: plan)  |
+| Metoda | Endpoint                 | Opis                                               |
+|--------|--------------------------|----------------------------------------------------|
+| POST   | /api/auth/register       | Rejestracja użytkownika                            |
+| POST   | /api/auth/login          | Logowanie i zwrot tokena JWT                       |
+| POST   | /api/tasks               | Tworzenie zadania ręcznie                          |
+| GET    | /api/tasks               | Lista zadań użytkownika                            |
+| PUT    | /api/tasks/:id           | Edycja zadania                                     |
+| POST   | /api/tasks/:id/close     | Zamykanie zadania (status + closedAt)             |
+| POST   | /api/tasks/ai-create     | Tworzenie zadania z pomocą GPT-4o                 |
 
 ---
 
@@ -56,11 +61,27 @@ backend/
 
 ---
 
+## 🧠 Integracja AI – GPT-4o
+
+- Nowy plik `services/gptService.js`
+- Obsługuje endpoint `POST /api/tasks/ai-create`
+- Korzysta z modelu `gpt-4o` do wygenerowania notatki (`notes`)
+- Obsługuje błędy API, walidację promptu
+- Konfigurowany przez `OPENAI_API_KEY` w `.env`
+
+---
+
+## 🧹 Formatowanie kodu
+
+- Plik `prettier.config.js` definiuje styl kodu backendu
+- Formatowanie wykonywane przez `npm run format`
+
+---
+
 ## 🧩 Middleware
 
 - `auth.js` – middleware JWT: sprawdza `Authorization: Bearer`, dekoduje `req.user`
-- `validate.js` – planowany: walidacja danych wejściowych (`express-validator`)
-- `requireRole.js` – planowany: kontrola ról (admin/user)
+- `validate.js` – obsługa błędów walidacji z `express-validator`
 
 ---
 
@@ -81,28 +102,20 @@ W pliku `config/db.js`:
 
 ---
 
-## 🔐 Autoryzacja
-
-- JWT generowane przy logowaniu (`/api/auth/login`)
-- Token wymagany w trasach `/api/tasks`
-- Token przesyłany w nagłówku: `Authorization: Bearer <token>`
-
----
-
 ## 🧪 Testy (planowane)
 
 - Testy jednostkowe z użyciem `Jest` + `Supertest`
 - Mockowanie MongoDB (np. z `mongodb-memory-server`)
-- Testy: rejestracja, logowanie, CRUD zadań
+- Testy: rejestracja, logowanie, CRUD zadań, AI
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `project_overview.md` – ogólny kontekst projektu i status implementacji
-- `api_spec.md` – specyfikacja REST API (auth, tasks, AI)
-- `utils.md` – dokumentacja `sendSuccess` / `sendError`
-- `middleware.md` – opis middleware JWT i planowane walidacje
-- `controllers.md` – opis logiki endpointów (auth, tasks)
-- `project_roadmap.md` – etapy rozwoju backendu i dalsze plany
-
+- `project_overview.md`
+- `api_spec.md`
+- `controllers.md`
+- `middleware.md`
+- `utils.md`
+- `validators.md`
+- `project_roadmap.md`

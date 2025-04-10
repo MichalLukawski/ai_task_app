@@ -58,6 +58,26 @@
 
 ---
 
+### POST `/api/tasks/ai-create`
+- **Opis:** Tworzy zadanie na podstawie opisu użytkownika z pomocą GPT-4o.
+- **Wymagania:** Autoryzacja JWT.
+- **Wymagane dane wejściowe (JSON):**
+  ```json
+  {
+    "description": "Nie działa API uczelni"
+  }
+  ```
+- **Działanie:**
+  - Wysyła prompt do OpenAI
+  - Zapisuje odpowiedź jako `notes`
+  - Tworzy zadanie z opisem i notatką AI
+- **Odpowiedzi:**
+  - `201 Created` + dane zadania
+  - `400 Bad Request` – brak opisu
+  - `500 Internal Server Error` – błąd komunikacji z GPT lub MongoDB
+
+---
+
 ### GET `/api/tasks`
 - **Opis:** Pobiera wszystkie zadania należące do zalogowanego użytkownika.
 - **Wymagania:** Autoryzacja JWT.

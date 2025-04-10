@@ -2,11 +2,10 @@
 
 ## 📘 API: Authentication
 
-### `POST /api/auth/register`
-
+### POST /api/auth/register
 Rejestracja nowego użytkownika.
 
-- **Body (JSON):**
+**Body:**
 ```json
 {
   "email": "user@example.com",
@@ -14,7 +13,7 @@ Rejestracja nowego użytkownika.
 }
 ```
 
-- **Success Response:**
+**Response:**
 ```json
 {
   "status": "success",
@@ -24,11 +23,10 @@ Rejestracja nowego użytkownika.
 
 ---
 
-### `POST /api/auth/login`
-
+### POST /api/auth/login
 Logowanie użytkownika.
 
-- **Body (JSON):**
+**Body:**
 ```json
 {
   "email": "user@example.com",
@@ -36,7 +34,7 @@ Logowanie użytkownika.
 }
 ```
 
-- **Success Response:**
+**Response:**
 ```json
 {
   "status": "success",
@@ -51,12 +49,11 @@ Logowanie użytkownika.
 
 ## 📘 API: Tasks
 
-### `POST /api/tasks`
+### POST /api/tasks
+Tworzenie nowego zadania (manualnie).
 
-Tworzenie nowego zadania.
-
-- **Headers:** `Authorization: Bearer <JWT>`
-- **Body:**
+**Headers:** Authorization: Bearer <JWT>
+**Body:**
 ```json
 {
   "description": "Nie działa API uczelni",
@@ -65,7 +62,7 @@ Tworzenie nowego zadania.
 }
 ```
 
-- **Success Response:**
+**Response:**
 ```json
 {
   "status": "success",
@@ -75,74 +72,49 @@ Tworzenie nowego zadania.
     "description": "...",
     "title": "...",
     "status": "open",
-    "dueDate": "2025-05-01T00:00:00.000Z",
-    "createdAt": "...",
-    ...
+    "dueDate": "...",
+    "createdAt": "..."
   }
 }
 ```
 
 ---
 
-### `GET /api/tasks`
+### POST /api/tasks/ai-create
+Tworzenie zadania z pomocą GPT-4o.
 
-Pobieranie listy zadań użytkownika.
-
-- **Headers:** `Authorization: Bearer <JWT>`
-
----
-
-### `PUT /api/tasks/:id`
-
-Aktualizacja zadania.
-
-- **Headers:** `Authorization: Bearer <JWT>`
-- **Body:**
+**Headers:** Authorization: Bearer <JWT>
+**Body:**
 ```json
 {
-  "description": "Zaktualizowany opis",
-  "title": "Zaktualizowany tytuł",
-  "status": "closed",
-  "dueDate": "2025-05-10"
+  "description": "Nie działa API uczelni, chyba brakuje nagłówka Authorization"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "AI-generated task created",
+  "data": {
+    "_id": "...",
+    "description": "...",
+    "notes": "...",
+    "status": "open",
+    "createdAt": "...",
+    "ownerId": "..."
+  }
 }
 ```
 
 ---
 
-### `POST /api/tasks/:id/close`
-
-Zamykanie zadania.
-
----
-
-## 📘 API: AI Assistant *(planowane)*
-
-### `POST /api/ai/similar-tasks`
-
-Porównanie problemu z historią zadań.
-
----
-
 ## 📘 API: System
 
-### `GET /api/health`
-
-Sprawdzenie działania backendu i połączenia z bazą.
+### GET /api/health
+Sprawdzenie działania backendu.
 
 ---
 
 ## 🛡️ Autoryzacja
-
-- Wszystkie trasy `tasks/`, `ai/` wymagają tokena JWT w nagłówku `Authorization`
-- Token dekodowany przez middleware `auth.js`
-
----
-
-## 📄 Dokumentacja powiązana
-
-- `project_overview.md`
-- `backend_overview.md`
-- `api_spec.md`
-- `validators.md`
-- `middleware.md`
-- `utils.md`
+Wszystkie trasy z `/api/tasks` i `/api/ai` wymagają tokena JWT w nagłówku Authorization.
