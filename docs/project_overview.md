@@ -22,28 +22,29 @@ AI Task App to aplikacja webowa wspierana przez GPT-4o, której celem jest wspom
 ### ✅ Backend:
 
 - Zrealizowano:
-  - `authController.js` – rejestracja i logowanie użytkownika (z JWT i bcrypt)
-  - `authRoutes.js` – routing do logowania i rejestracji
-  - `User.js` – model użytkownika z rolą
-  - `Task.js` – model zadania z polami: opis, status, daty, notatki, termin (`dueDate`)
+  - `authController.js` – rejestracja i logowanie użytkownika (JWT i bcrypt)
   - `taskController.js` – CRUD zadań + zamknięcie + tworzenie z AI (`createWithAI`)
-  - `taskRoutes.js` – routing do obsługi zadań, w tym `/ai-create`
-  - `services/gptService.js` – integracja z OpenAI API (GPT-4o)
-  - `middleware/auth.js`, `validate.js` – autoryzacja i walidacja
-  - `utils/responseHandler.js` – jednolity system odpowiedzi
-  - `validators/taskValidator.js` – walidacja pól zadania
-  - `prettier.config.js` – ujednolicenie stylu kodu w całym backendzie
+  - `gptService.js` – generowanie struktury zadania (JSON), fallback, logowanie
+  - `utils/logger.js` – logowanie błędów GPT (`logs/gpt_fallbacks.log`)
+  - `taskRoutes.js` – routing dla zadań, w tym `/ai-create`
+  - `services/`, `middleware/`, `validators/` – modularna architektura
+  - Obsługa daty i oczyszczania markdown z odpowiedzi GPT
 
-- Brakuje:
-  - semantycznego porównywania (`/api/ai/similar-tasks`)
-  - frontendowego UI dla widoku tasków (planowane)
+- W planach:
+  - `difficulty` (ocena trudności zadania przez GPT)
+  - `similar-tasks` (embedding + porównanie przez cosine similarity)
+  - Generowanie podsumowań przy zamykaniu zadania
 
 ---
 
-## ❌ Frontend:
+### ❌ Frontend:
 
-- Frontend nie istnieje – brak plików React (`src/`, `components/`, `pages/`, itd.)
-- Obecny jest tylko szkielet z `README.md`
+- Brak kodu źródłowego frontendu (tylko szkielet i dokumentacja)
+- Brakuje UI do:
+  - Tworzenia/edycji zadań
+  - Podglądu podobnych zadań
+  - Weryfikacji odpowiedzi GPT
+  - Obsługi logowania JWT
 
 ---
 
@@ -54,9 +55,9 @@ AI Task App to aplikacja webowa wspierana przez GPT-4o, której celem jest wspom
         ↓
 [ Frontend – React ]        ← planowane
         ↓ axios/fetch
-[ Backend – Express ]       ← pełna logika (auth, tasks, AI)
+[ Backend – Express ]       ← pełna logika (auth, tasks, AI, fallback)
         ↓
-[ MongoDB + GPT-4o API ]    ← działa od wersji 0.0.6
+[ MongoDB + GPT-4o API + Logs ]
 ```
 
 ---
@@ -65,7 +66,8 @@ AI Task App to aplikacja webowa wspierana przez GPT-4o, której celem jest wspom
 
 - Backend: Node.js, Express, JWT, bcrypt, dotenv, express-validator
 - Baza danych: MongoDB (lokalna i chmurowa)
-- AI: OpenAI GPT-4o (`openai` SDK)
+- AI: OpenAI GPT-4o (`openai` SDK) + logika JSON/fallback
+- Logging: `logs/gpt_fallbacks.log`
 - Formatowanie: Prettier
 - Frontend: planowany (React + Tailwind)
 
@@ -75,33 +77,32 @@ AI Task App to aplikacja webowa wspierana przez GPT-4o, której celem jest wspom
 
 | Funkcja                          | Planowane | Zrealizowane         |
 |----------------------------------|-----------|----------------------|
-| Rejestracja i logowanie (JWT)   | ✅         | ✅ pełne             |
+| Rejestracja i logowanie (JWT)   | ✅         | ✅                   |
 | Tworzenie zadań z AI             | ✅         | ✅ (`POST /ai-create`) |
 | Obsługa terminów wykonania       | ✅         | ✅                   |
-| Przeszukiwanie historii (AI)     | ✅         | ❌ brak              |
+| Fallback + log błędnych JSON GPT | ❌         | ✅ nowość v0.0.7     |
+| Przeszukiwanie historii (AI)     | ✅         | 🔄 w planach         |
+| Ocena trudności (`difficulty`)   | ✅         | ❌ planowane         |
 | Frontend: dashboard              | ✅         | ❌ brak              |
-| Middleware do ról i ochrony      | ✅         | 🟡 JWT działa        |
-| Semantyczne porównanie           | ✅         | ❌ brak              |
-| Klucz API + integracja GPT       | ✅         | ✅                   |
 
 ---
 
 ## 🔄 Historia wersji
 
-### v0.0.6 – 2025-04-10
+### v0.0.7 – 2025-04-10
 
-- Dodano integrację GPT-4o do backendu
-- Nowy endpoint: `POST /api/tasks/ai-create`
-- Moduł `gptService.js` i obsługa błędów OpenAI
-- Formatowanie kodu z Prettier (`prettier.config.js`)
-- Wersja gotowa do testów i dalszego rozwoju AI
+- GPT zwraca strukturę zadania w formacie JSON
+- Obsługa błędnego JSON (`try/catch`) → fallback do `notes`
+- Logowanie błędów do `logs/gpt_fallbacks.log`
+- Rozpoczęcie przygotowań do embeddingów i porównań semantycznych
 
 ---
 
 ## 📄 Dokumentacja
 
-- `project_overview.md` – ogólny kontekst projektu i jego aktualny stan
-- `backend_overview.md` – opis struktury backendu i przepływów logiki
-- `api_spec.md` – specyfikacja endpointów REST API
-- `validators.md`, `middleware.md`, `utils.md` – dokumentacja komponentów pomocniczych
-- `project_roadmap.md` – status etapów implementacji
+- `project_roadmap.md`
+- `backend_overview.md`
+- `api_spec.md`
+- `utils.md`
+- `services.md`
+- `ai_integration.md`

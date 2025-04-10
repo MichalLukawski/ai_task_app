@@ -1,7 +1,6 @@
 # 📍 AI Task App – Roadmapa projektu
 
 ## 🔄 Etap 0: Fundament backendu (**ZREALIZOWANE**)
-
 - [x] Inicjalizacja projektu Node.js
 - [x] Konfiguracja Express i MongoDB
 - [x] Model użytkownika (`User.js`)
@@ -13,7 +12,6 @@
 ---
 
 ## 🚀 Etap 1: System zadań (**ZREALIZOWANE**)
-
 - [x] Model `Task.js` z polami: opis, status, daty, notatki AI
 - [x] Dodanie pola `dueDate` (termin wykonania) + obsługa
 - [x] Endpoint `POST /api/tasks` – tworzenie zadania
@@ -26,29 +24,30 @@
 
 ---
 
-## 🤖 Etap 2: Integracja GPT (**W TRAKCIE / CZĘŚCIOWO ZREALIZOWANE**)
-
+## 🤖 Etap 2: Integracja GPT (**W TRAKCIE**)
 - [x] Połączenie z OpenAI API (model GPT-4o)
 - [x] Endpoint `POST /api/tasks/ai-create` – generowanie zadania
-- [x] Moduł `gptService.js`
-- [x] Obsługa błędów (np. brak modelu, limit, quota)
-- [ ] Przechowywanie i szyfrowanie klucza API
+- [x] Moduł `gptService.js` – nowa wersja: odpowiedź w JSON
+- [x] Uwzględnienie bieżącej daty w promcie
+- [x] Parsowanie odpowiedzi GPT (`JSON.parse`)
+- [x] Fallback: jeśli odpowiedź nieparsowalna → zapis do `notes`
+- [x] Logowanie błędnych odpowiedzi do `logs/gpt_fallbacks.log`
 - [ ] Generowanie podsumowania przy zamykaniu zadania
-- [ ] Endpoint `POST /api/ai/similar-tasks`
+- [ ] Przechowywanie i szyfrowanie klucza API
+- [ ] Ocena trudności zadania przez GPT (`difficulty`: 1–5) – **PLANOWANE**
 
 ---
 
-## 🧠 Etap 3: Semantyczna historia (**DO ZROBIENIA**)
-
-- [ ] Zapytanie do AI z aktualnym opisem
-- [ ] Porównanie z istniejącymi zadaniami
-- [ ] Ranking trafności + linki do historii
-- [ ] Wizualizacja podobieństw
+## 🧠 Etap 3: Semantyczna historia (**PLANOWANE / ROZPISANE**)
+- [ ] Tworzenie embeddingów z opisów zadań (model: `text-embedding-3-small`)
+- [ ] Porównanie nowego zadania z historią przez cosine similarity
+- [ ] Dopiero top 3 przypadki analizowane przez GPT-4o (opcjonalnie)
+- [ ] Endpoint `POST /api/ai/similar-tasks`
+- [ ] Wizualizacja podobieństw / linki do historii
 
 ---
 
 ## 🎨 Etap 4: Frontend (**DO ZROBIENIA**)
-
 - [ ] Inicjalizacja projektu React + Tailwind
 - [ ] Formularz logowania i rejestracji
 - [ ] Dashboard z listą zadań
@@ -59,7 +58,6 @@
 ---
 
 ## 📊 Etap 5: Rozwój i produkcja (**PLANOWANE**)
-
 - [ ] Tryb zespołowy i organizacje
 - [ ] Role: admin, user, readonly
 - [ ] Eksport danych do CSV / JSON
@@ -72,8 +70,8 @@
 
 ## 🔚 Podsumowanie
 
-Etap 1 został w pełni zakończony.  
-Wersja `0.0.6` zawiera pierwszą implementację integracji z GPT-4o:  
-moduł `gptService.js`, endpoint `POST /api/tasks/ai-create` oraz poprawne logowanie i obsługę błędów.
-
-Backend gotowy do dalszego rozwoju: generowanie podsumowań i porównań semantycznych.
+Etap 2 został znacznie rozszerzony w wersji `0.0.7` (2025-04-10):
+- Zmieniono sposób integracji GPT: zwracany jest JSON, nie markdown
+- Dodano mechanizm fallbacku i logowania błędnych odpowiedzi AI
+- Zdefiniowano plan wdrożenia embeddingów i porównań semantycznych
+- Zaplanowano ocenę trudności (`difficulty`) przy użyciu GPT

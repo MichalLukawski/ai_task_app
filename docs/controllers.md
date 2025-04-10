@@ -3,105 +3,69 @@
 ## 🔐 Kontroler: `authController.js`
 
 ### POST `/api/auth/register`
-- **Opis:** Rejestruje nowego użytkownika.
-- **Wymagane dane wejściowe (JSON):**
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "securepassword"
-  }
-  ```
-- **Działanie:**
-  - Tworzy nowego użytkownika w bazie danych.
-  - Hasło jest haszowane (bcrypt).
-  - Zwraca token JWT.
-- **Odpowiedzi:**
-  - `201 Created` + `{ token }`
-  - `400 Bad Request` jeśli użytkownik już istnieje
-  - `500 Internal Server Error` przy błędzie serwera
-
----
+- Rejestruje nowego użytkownika.
+- Hasło haszowane (`bcrypt`), zwracany JWT.
 
 ### POST `/api/auth/login`
-- **Opis:** Loguje istniejącego użytkownika.
-- **Wymagane dane wejściowe (JSON):**
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "securepassword"
-  }
-  ```
-- **Działanie:**
-  - Sprawdza, czy użytkownik istnieje i hasło jest poprawne.
-  - Zwraca token JWT.
-- **Odpowiedzi:**
-  - `200 OK` + `{ token }`
-  - `401 Unauthorized` przy złych danych logowania
-  - `500 Internal Server Error` przy błędzie serwera
+- Sprawdza poprawność danych logowania.
+- Zwraca token JWT przy sukcesie.
 
 ---
 
 ## 🗂️ Kontroler: `taskController.js`
 
 ### POST `/api/tasks`
-- **Opis:** Tworzy nowe zadanie przypisane do zalogowanego użytkownika.
-- **Wymagania:** Autoryzacja JWT.
-- **Wymagane dane wejściowe (JSON):**
-  ```json
-  {
-    "description": "Opis problemu lub zadania"
-  }
-  ```
-- **Odpowiedzi:**
-  - `201 Created` + dane zadania
-  - `500 Internal Server Error` przy błędzie zapisu
+- Tworzy nowe zadanie przypisane do użytkownika.
+- Walidacja `description`, `title`, `status`, `dueDate`.
 
 ---
 
 ### POST `/api/tasks/ai-create`
-- **Opis:** Tworzy zadanie na podstawie opisu użytkownika z pomocą GPT-4o.
-- **Wymagania:** Autoryzacja JWT.
-- **Wymagane dane wejściowe (JSON):**
-  ```json
-  {
-    "description": "Nie działa API uczelni"
-  }
-  ```
-- **Działanie:**
-  - Wysyła prompt do OpenAI
-  - Zapisuje odpowiedź jako `notes`
-  - Tworzy zadanie z opisem i notatką AI
-- **Odpowiedzi:**
-  - `201 Created` + dane zadania
-  - `400 Bad Request` – brak opisu
-  - `500 Internal Server Error` – błąd komunikacji z GPT lub MongoDB
+- Tworzy zadanie na podstawie opisu użytkownika z pomocą GPT-4o.
+- **Nowość od v0.0.7**:
+  - Oczekuje odpowiedzi w formacie JSON
+  - Czyszczenie markdown (```json)
+  - Parsowanie JSON (`JSON.parse`)
+  - W przypadku błędu: fallback → zapis do pola `notes`, log do `logs/gpt_fallbacks.log`
+- W przyszłości możliwe dodanie pola `difficulty` oraz porównywanie podobnych zadań.
+- Walidacja: `description` minimum 5 znaków.
+
+**Body:**
+```json
+{
+  "description": "Nie działa API uczelni, prawdopodobnie brak Authorization"
+}
+```
+
+**Typowa odpowiedź:**
+```json
+{
+  "title": "Naprawa integracji API",
+  "description": "Zadanie polega na przywróceniu poprawnego działania endpointu API uczelni...",
+  "dueDate": "2025-04-15",
+  "notes": "Wydaje się pilne."
+}
+```
 
 ---
 
 ### GET `/api/tasks`
-- **Opis:** Pobiera wszystkie zadania należące do zalogowanego użytkownika.
-- **Wymagania:** Autoryzacja JWT.
-- **Odpowiedzi:**
-  - `200 OK` + tablica zadań
-  - `500 Internal Server Error` przy błędzie pobierania
+- Zwraca wszystkie zadania zalogowanego użytkownika (`ownerId`)
 
 ---
 
 ### PUT `/api/tasks/:id`
-- **Opis:** Aktualizuje dane zadania.
-- **Wymagania:** Autoryzacja JWT.
-- **Dane wejściowe:** dowolne pola do zaktualizowania (np. `description`, `title`)
-- **Odpowiedzi:**
-  - `200 OK` + zaktualizowane zadanie
-  - `404 Not Found` jeśli zadanie nie istnieje lub nie należy do użytkownika
-  - `500 Internal Server Error` przy błędzie
+- Aktualizuje istniejące zadanie (tytuł, opis, termin, status)
 
 ---
 
 ### POST `/api/tasks/:id/close`
-- **Opis:** Zamyka zadanie (ustawia `status: "closed"` i `closedAt`).
-- **Wymagania:** Autoryzacja JWT.
-- **Odpowiedzi:**
-  - `200 OK` + zaktualizowane zadanie
-  - `404 Not Found` jeśli zadanie nie istnieje lub nie należy do użytkownika
-  - `500 Internal Server Error` przy błędzie
+- Zamyka zadanie (`status = closed`, `closedAt = now()`)
+- Planowane: automatyczne podsumowanie działania z pomocą GPT
+
+---
+
+## 🔐 Wymagania JWT
+
+Wszystkie powyższe metody poza `/auth/*` wymagają tokena JWT (`Authorization: Bearer <token>`)
+

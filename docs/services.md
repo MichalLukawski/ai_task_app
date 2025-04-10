@@ -2,7 +2,7 @@
 
 ## 📁 Plik: `services/gptService.js`
 
-Plik ten zawiera funkcje odpowiedzialne za komunikację z OpenAI API i generowanie treści zadania (notes, title, itp.) na podstawie opisu użytkownika.
+Plik ten zawiera funkcje odpowiedzialne za komunikację z OpenAI API i generowanie struktury zadania w formacie JSON, z wykorzystaniem modelu GPT-4o.
 
 ---
 
@@ -13,50 +13,60 @@ Plik ten zawiera funkcje odpowiedzialne za komunikację z OpenAI API i generowan
 - **Typ:** `async function`
 - **Parametry:**
   - `description` *(string)* – opis zadania podany przez użytkownika
-- **Zwraca:** `Promise<string>` – wygenerowana notatka zadania (markdown)
+- **Zwraca:** `Promise<object>` – struktura zadania: `{ title, description, dueDate?, notes? }`
 
 ---
 
-## 📦 Wykorzystane technologie
+## ⚙️ Jak działa
 
-- SDK: `openai@4.x`
-- Model: `gpt-4o` (domyślnie, fallback: `gpt-3.5-turbo` – opcjonalnie)
-- API: `chat.completions.create(...)`
-- Konfiguracja z pliku `.env`:
-  ```env
-  OPENAI_API_KEY=sk-...
-  ```
+1. Generuje prompt systemowy z aktualną datą
+2. Wysyła zapytanie do modelu `gpt-4o` (OpenAI)
+3. Oczekuje odpowiedzi w formacie JSON
+4. Czyści markdown (```json)
+5. Próbuje sparsować JSON
 
 ---
 
-## 🛠 Przykład użycia w kontrolerze
+## 🛡️ Fallback
+
+- Jeśli `JSON.parse()` nie powiedzie się:
+  - Treść odpowiedzi zostaje zapisana jako `notes`
+  - Tworzony jest obiekt zadania z pustym `title`, oryginalnym `description` i notatką
+  - Surowa odpowiedź GPT jest zapisywana do pliku `logs/gpt_fallbacks.log`
+
+---
+
+## 📥 Przykład użycia w kontrolerze
 
 ```js
 const { getTaskStructureFromAI } = require("../services/gptService");
 
 exports.createWithAI = async (req, res) => {
   const { description } = req.body;
-  const aiNotes = await getTaskStructureFromAI(description);
-  const task = new Task({ description, notes: aiNotes, ... });
-  await task.save();
+  const taskData = await getTaskStructureFromAI(description);
+  // tworzenie zadania w MongoDB
 };
 ```
 
 ---
 
-## 🔐 Bezpieczeństwo i limity
+## 🧪 Logowanie błędów
 
-- Klucz API nie jest przesyłany do frontend
-- Obsługiwane błędy:
-  - Brak dostępu do modelu (`404 model not found`)
-  - Przekroczony limit (`429`)
-  - Brak tokenów (`quota exceeded`)
-- W razie błędów: `try/catch`, logowanie błędu i `sendError(...)`
+- Funkcja pomocnicza: `logGPTFallback(raw, userDescription)`
+- Zapisuje datę, opis użytkownika i nieparsowalną odpowiedź GPT
+- Plik logu: `logs/gpt_fallbacks.log`
 
 ---
 
-## 📄 Powiązania
+## 🔐 Bezpieczeństwo
 
-- `controllers/taskController.js` → metoda `createWithAI`
-- `routes/taskRoutes.js` → endpoint `POST /api/tasks/ai-create`
-- `middleware/auth.js` → autoryzacja JWT
+- Bieżąca data w promptcie pomaga GPT rozpoznawać daty typu „do 15 maja”
+- Brak przesyłania klucza OpenAI do frontend
+
+---
+
+## 🧩 Planowane rozszerzenia
+
+- Dodanie `difficulty` (ocena trudności przez GPT)
+- Obsługa promptów dla podsumowania zamknięcia (`/api/tasks/:id/close`)
+- Funkcja pomocnicza `getSimilarTasksByEmbedding()` (osobny moduł)

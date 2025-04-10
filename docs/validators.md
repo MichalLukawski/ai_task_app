@@ -14,7 +14,6 @@ Walidatory dla tworzenia i edycji zadań. Oparte o `express-validator`.
 - **status** – opcjonalne, `"open"` lub `"closed"`
 - **dueDate** – opcjonalne, ale musi być w formacie ISO (`YYYY-MM-DD` lub pełna data/czas)
 
-### Kod:
 ```js
 exports.validateTaskInput = [
   body("description")
@@ -40,6 +39,13 @@ exports.validateTaskInput = [
 
 ### Powiązania:
 
-- W trasach `POST` i `PUT /api/tasks/:id`
-- Razem z middleware `validate.js`
+- Używane w trasach `POST` i `PUT /api/tasks/:id`
+- Współpracuje z middleware `validate.js`
 - Zgodność z modelem `Task.js`
+
+---
+
+### Planowane rozszerzenia:
+
+- Możliwość walidacji nowego pola `difficulty` (jeśli zostanie dodane przez AI)
+- Możliwe wymuszenie doprecyzowania `description` w przyszłości (np. do minimum semantycznego)

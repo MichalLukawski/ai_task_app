@@ -52,7 +52,7 @@ Logowanie użytkownika.
 ### POST /api/tasks
 Tworzenie nowego zadania (manualnie).
 
-**Headers:** Authorization: Bearer <JWT>
+**Headers:** Authorization: Bearer <JWT>  
 **Body:**
 ```json
 {
@@ -81,9 +81,9 @@ Tworzenie nowego zadania (manualnie).
 ---
 
 ### POST /api/tasks/ai-create
-Tworzenie zadania z pomocą GPT-4o.
+Tworzenie zadania z pomocą GPT-4o (automatyczne).
 
-**Headers:** Authorization: Bearer <JWT>
+**Headers:** Authorization: Bearer <JWT>  
 **Body:**
 ```json
 {
@@ -91,7 +91,7 @@ Tworzenie zadania z pomocą GPT-4o.
 }
 ```
 
-**Response:**
+**Response (typowy przypadek):**
 ```json
 {
   "status": "success",
@@ -99,13 +99,20 @@ Tworzenie zadania z pomocą GPT-4o.
   "data": {
     "_id": "...",
     "description": "...",
+    "title": "...",
     "notes": "...",
+    "dueDate": "2025-04-15",
     "status": "open",
     "createdAt": "...",
     "ownerId": "..."
   }
 }
 ```
+
+**Uwaga:**
+- odpowiedź generowana przez GPT musi być poprawnym JSON-em
+- jeśli nie jest – system automatycznie zapisuje `notes` z oryginalnej odpowiedzi (fallback)
+- odpowiedzi fallbackowe są logowane do `logs/gpt_fallbacks.log`
 
 ---
 
@@ -116,5 +123,7 @@ Sprawdzenie działania backendu.
 
 ---
 
-## 🛡️ Autoryzacja
-Wszystkie trasy z `/api/tasks` i `/api/ai` wymagają tokena JWT w nagłówku Authorization.
+## 📌 Planowane rozszerzenia API
+
+- `POST /api/ai/similar-tasks` – zwraca podobne zadania na podstawie embeddingów
+- Ocena trudności zadania (`difficulty`) jako część odpowiedzi GPT (w przyszłości)

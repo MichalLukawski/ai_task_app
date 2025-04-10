@@ -2,7 +2,7 @@
 
 ## 🎯 Cel integracji
 
-Sztuczna inteligencja (GPT-4) ma wspierać użytkownika w zarządzaniu zadaniami i rozwiązywaniu problemów.  
+Sztuczna inteligencja (GPT-4) ma wspierać użytkownika w zarządzaniu zadaniami i rozwiązywaniu problemów.
 GPT pełni funkcję asystenta, który rozumie intencję użytkownika i pomaga w tworzeniu, analizie i zamykaniu zadań.
 
 ---
@@ -10,8 +10,8 @@ GPT pełni funkcję asystenta, który rozumie intencję użytkownika i pomaga w 
 ## 🔐 Uwierzytelnianie do OpenAI
 
 - Użytkownik podaje własny klucz API do OpenAI
-- Klucz jest przesyłany do backendu i **przechowywany zaszyfrowany** (np. AES)
-- Backend komunikuje się z OpenAI, nigdy frontend
+- Klucz jest przesyłany do backendu i (planowane) przechowywany zaszyfrowany (AES)
+- Backend komunikuje się z OpenAI – frontend nie ma dostępu do klucza
 
 ---
 
@@ -21,12 +21,12 @@ Typowe zapytanie:
 
 ```js
 const response = await openai.createChatCompletion({
-  model: "gpt-4",
+  model: "gpt-4o",
   messages: [
-    { role: "system", content: "Jesteś pomocnym asystentem do zarządzania zadaniami." },
-    { role: "user", content: "Stwórz strukturę zadania na podstawie: 'Nie działa integracja z API uczelni'" }
+    { role: "system", content: "Dziś jest 2025-04-10. Jesteś pomocnym asystentem do zarządzania zadaniami..." },
+    { role: "user", content: "Do 20 maja mam napisać parser XML." }
   ],
-  temperature: 0.7
+  temperature: 0.3
 });
 ```
 
@@ -36,62 +36,64 @@ const response = await openai.createChatCompletion({
 
 ### ✅ Wspierane funkcje:
 
-1. **Tworzenie zadania**  
-   GPT generuje: tytuł, opis, notatki, deadline (opcjonalnie)  
-   → np. z 1 zdania użytkownika tworzy pełny szkielet zadania.
+1. **Tworzenie zadania**
+   - GPT generuje: `title`, `description`, `dueDate` (jeśli występuje), `notes`
+   - Odpowiedź oczekiwana jest w formacie **czystego JSON**
 
-2. **Podsumowanie wykonania**  
-   Użytkownik wpisuje „zrobione”, GPT generuje krótkie podsumowanie działania.
+2. **Fallback przy błędnym JSON**
+   - Jeśli GPT nie zwróci poprawnego JSON → odpowiedź zostaje zapisana jako `notes`
+   - Fallback logowany do `logs/gpt_fallbacks.log` przez `logGPTFallback()`
 
-3. **Semantyczne wyszukiwanie**  
-   GPT porównuje obecne zapytanie z historią zadań i znajduje podobne przypadki.
+3. **Podsumowanie wykonania (planowane)**
+   - GPT generuje podsumowanie działania przy zamykaniu zadania (`/close`)
 
-4. **Ocena trudności**  
-   GPT ocenia na podstawie opisu, czy zadanie jest proste, średnie czy trudne.
+4. **Semantyczne wyszukiwanie (planowane)**
+   - Embeddingi generowane lokalnie (lub przez `text-embedding-3-small`)
+   - Porównanie z poprzednimi zadaniami
+   - Dopiero top 3 analizowane przez GPT
 
-5. **Priorytetyzacja**  
-   Na podstawie opisu, terminu i historii GPT proponuje kolejność realizacji zadań.
+5. **Ocena trudności zadania (planowane)**
+   - `difficulty: 1–5` na podstawie złożoności opisu użytkownika
 
-6. **Sugestie AI**  
-   - „Jakie mam teraz otwarte zadania?”
-   - „Co jest najprostsze do zrobienia?”
-   - „Od czego powinienem zacząć?”
+6. **Sugestie AI (planowane)**
+   - Jakie mam teraz otwarte zadania?
+   - Co jest najłatwiejsze do zrobienia?
+   - Od czego zacząć?
 
 ---
 
-## ⚙️ Jak to działa w backendzie
+## ⚙️ Obsługa backendowa
 
-- Moduł `aiService.js` lub `gptController.js`
-- Komunikacja z API OpenAI
-- Obsługa błędów (`try/catch`)
-- Kontekst użytkownika (prompt + historia)
-- Resetowanie kontekstu po zamknięciu zadania
+- Plik: `services/gptService.js`
+- Oczyszcza odpowiedź GPT z bloków markdown (```json)
+- Parsuje do obiektu JSON
+- W przypadku błędu → fallback + log do `logs/gpt_fallbacks.log`
+- Użycie bieżącej daty w promptcie do rozpoznawania terminów
 
 ---
 
 ## 🔐 Bezpieczeństwo
 
-- Klucz OpenAI zapisywany zaszyfrowany (`AES` lub `crypto`)
-- Nieprzechowywanie historii rozmów GPT na zewnętrznym koncie
-- Czyszczenie kontekstu po zakończeniu operacji
+- Klucz OpenAI nie trafia do frontend
+- Planowane szyfrowanie klucza użytkownika (AES lub `crypto`)
+- Resetowanie kontekstu po zakończeniu zadania
 
 ---
 
-## 🔄 Rozszerzenia w przyszłości
+## 📌 Planowane rozszerzenia
 
-- Obsługa modeli embeddingów (`text-embedding-ada-002`) i wektorowego wyszukiwania
-- Integracja z Pinecone, Qdrant lub Weaviate
-- „Tryb eksperta” – GPT uczy się na podstawie zadań użytkownika
-- System punktacji lub trudności AI dla gamifikacji
-- Wsparcie dla promptów systemowych definiowanych przez administratora
+- Embeddingi (OpenAI lub lokalnie np. `all-MiniLM`)
+- Silnik wektorowy (Qdrant / Weaviate / FAISS) do szybkiego porównywania
+- Panel "podobne zadania" po utworzeniu nowego
+- Punktacja zadań (`difficulty`)
+- Możliwość „uczenia AI” na własnych zadaniach (tryb eksperta)
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `project_overview.md` – pełny kontekst projektu, cele, architektura, repozytoria, AI, modularność
-- `backend_overview.md` – opis struktury backendu, endpointów, technologii i modelu autoryzacji
-- `frontend_overview.md` – opis frontendu, komponentów, architektury, interfejsów użytkownika
-- `api_spec.md` – specyfikacja endpointów REST API (auth, tasks, AI), dane wejściowe/wyjściowe
-- `ai_integration.md` – jak GPT-4 wspiera zadania: tworzenie, ocena, zamykanie, priorytetyzacja
-- `project_roadmap.md` – roadmapa projektu: fazy rozwoju, MVP, AI, skalowanie, funkcje zespołowe
+- `project_roadmap.md`
+- `services.md`
+- `utils.md`
+- `validators.md`
+- `backend_overview.md`

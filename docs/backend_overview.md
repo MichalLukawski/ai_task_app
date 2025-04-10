@@ -23,8 +23,9 @@ backend/
 ├── routes/           # Endpointy API: authRoutes, taskRoutes
 ├── middleware/       # Obsługa JWT (auth.js), walidacja (validate.js)
 ├── services/         # Integracja z GPT: gptService.js
-├── utils/            # Funkcje pomocnicze: responseHandler
+├── utils/            # Funkcje pomocnicze: responseHandler, logger
 ├── validators/       # Walidacja pól (express-validator)
+├── logs/             # Logi diagnostyczne, np. fallbacki GPT
 ├── prettier.config.js# Konfiguracja formatowania kodu
 ├── .env              # Zmienne środowiskowe (lokalne)
 └── server.js         # Główna aplikacja Express
@@ -46,28 +47,14 @@ backend/
 
 ---
 
-## 🔐 Rejestracja i logowanie
-
-- Rejestracja:
-  - Sprawdzenie, czy email istnieje
-  - Hashowanie hasła (`bcrypt`)
-  - Zapis do `User`
-  - Odpowiedź: `sendSuccess` lub `sendError`
-
-- Logowanie:
-  - Weryfikacja danych
-  - Generowanie JWT (`jsonwebtoken`)
-  - Middleware sprawdzający token (`auth.js`)
-
----
-
 ## 🧠 Integracja AI – GPT-4o
 
-- Nowy plik `services/gptService.js`
-- Obsługuje endpoint `POST /api/tasks/ai-create`
-- Korzysta z modelu `gpt-4o` do wygenerowania notatki (`notes`)
-- Obsługuje błędy API, walidację promptu
-- Konfigurowany przez `OPENAI_API_KEY` w `.env`
+- Moduł `gptService.js` obsługuje generowanie struktury zadania w formacie JSON
+- Używany model: `gpt-4o`, prompt uwzględnia bieżącą datę
+- Czyszczenie odpowiedzi z markdown
+- Obsługa błędów JSON (`JSON.parse`)
+- **Fallback:** odpowiedź zapisywana jako `notes`, log do `logs/gpt_fallbacks.log`
+- Funkcja pomocnicza `logGPTFallback()` zapisuje błędy do logu
 
 ---
 
@@ -89,16 +76,16 @@ backend/
 
 - `responseHandler.js` – funkcje `sendSuccess` i `sendError`:
   - Ujednolicone odpowiedzi API w całej aplikacji
-  - Wspiera kodowanie komunikatów i statusów błędów
+- `logger.js` – `logGPTFallback()`:
+  - Zapisywanie nieparsowalnych odpowiedzi GPT do `logs/gpt_fallbacks.log`
 
 ---
 
 ## 🔗 Połączenie z MongoDB
 
-W pliku `config/db.js`:
+- Plik `config/db.js`
 - `mongoose.connect(process.env.MONGO_URI)`
-- W razie błędu: `process.exit(1)`
-- Serwer startuje dopiero po połączeniu z bazą
+- Serwer startuje po udanym połączeniu
 
 ---
 
@@ -117,5 +104,5 @@ W pliku `config/db.js`:
 - `controllers.md`
 - `middleware.md`
 - `utils.md`
+- `services.md`
 - `validators.md`
-- `project_roadmap.md`
