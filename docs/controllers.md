@@ -1,36 +1,40 @@
 # 📘 Dokumentacja kontrolerów – AI Task App
 
-## 🔐 Kontroler: `authController.js`
+## 🔐 Kontroler: authController.js
 
-### POST `/api/auth/register`
+### POST /api/auth/register
+
 - Rejestruje nowego użytkownika.
 - Hasło haszowane (`bcrypt`), zwracany JWT.
 
-### POST `/api/auth/login`
+### POST /api/auth/login
+
 - Sprawdza poprawność danych logowania.
 - Zwraca token JWT przy sukcesie.
 
 ---
 
-## 🗂️ Kontroler: `taskController.js`
+## 🗂️ Kontroler: taskController.js
 
-### POST `/api/tasks`
+### POST /api/tasks
+
 - Tworzy nowe zadanie przypisane do użytkownika.
-- Walidacja `description`, `title`, `status`, `dueDate`.
+- Walidacja pól: `description`, `title`, `status`, `dueDate`.
 
 ---
 
-### POST `/api/tasks/ai-create`
-- Tworzy zadanie na podstawie opisu użytkownika z pomocą GPT-4o.
-- **Nowość od v0.0.7**:
-  - Oczekuje odpowiedzi w formacie JSON
-  - Czyszczenie markdown (```json)
-  - Parsowanie JSON (`JSON.parse`)
-  - W przypadku błędu: fallback → zapis do pola `notes`, log do `logs/gpt_fallbacks.log`
-- W przyszłości możliwe dodanie pola `difficulty` oraz porównywanie podobnych zadań.
-- Walidacja: `description` minimum 5 znaków.
+### POST /api/tasks/ai-create
 
-**Body:**
+- Tworzy zadanie na podstawie opisu użytkownika z pomocą GPT-4o (function calling).
+- Wywołuje `getTaskStructureFromAI(description)` → dane: `title`, `description`, `dueDate?`, `difficulty?`
+- Zapisuje zadanie do MongoDB
+- Następnie uruchamia `generateAndAttachEmbedding(taskId)`:
+  - generuje embedding (`text-embedding-3-small`)
+  - przypisuje `similarTasks` (top 5 z `similarity >= 0.75`)
+- Walidacja: `description` minimum 5 znaków
+
+**Przykład body:**
+
 ```json
 {
   "description": "Nie działa API uczelni, prawdopodobnie brak Authorization"
@@ -38,34 +42,39 @@
 ```
 
 **Typowa odpowiedź:**
+
 ```json
 {
-  "title": "Naprawa integracji API",
-  "description": "Zadanie polega na przywróceniu poprawnego działania endpointu API uczelni...",
-  "dueDate": "2025-04-15",
-  "notes": "Wydaje się pilne."
+  "title": "Naprawa API uczelni",
+  "description": "Zidentyfikuj i napraw problem z API uczelni...",
+  "dueDate": "2025-05-20",
+  "difficulty": 4,
+  "similarTasks": [...],
+  "embedding": [...]
 }
 ```
 
 ---
 
-### GET `/api/tasks`
+### GET /api/tasks
+
 - Zwraca wszystkie zadania zalogowanego użytkownika (`ownerId`)
 
 ---
 
-### PUT `/api/tasks/:id`
+### PUT /api/tasks/:id
+
 - Aktualizuje istniejące zadanie (tytuł, opis, termin, status)
 
 ---
 
-### POST `/api/tasks/:id/close`
+### POST /api/tasks/:id/close
+
 - Zamyka zadanie (`status = closed`, `closedAt = now()`)
-- Planowane: automatyczne podsumowanie działania z pomocą GPT
+- Planowane: AI generuje `summary` z wykorzystaniem podobnych zadań (`similarTasks`)
 
 ---
 
 ## 🔐 Wymagania JWT
 
 Wszystkie powyższe metody poza `/auth/*` wymagają tokena JWT (`Authorization: Bearer <token>`)
-

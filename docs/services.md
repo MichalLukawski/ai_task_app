@@ -1,8 +1,8 @@
-# 🧠 Dokumentacja – services/gptService.js
+# 🧠 Dokumentacja – services/gptService.function.js
 
-## 📁 Plik: `services/gptService.js`
+## 📁 Plik: `services/gptService.function.js`
 
-Plik ten zawiera funkcje odpowiedzialne za komunikację z OpenAI API i generowanie struktury zadania w formacie JSON, z wykorzystaniem modelu GPT-4o.
+Plik zawiera funkcję odpowiedzialną za generowanie struktury zadania z wykorzystaniem mechanizmu **function calling** w modelu `gpt-4o` (OpenAI API).
 
 ---
 
@@ -12,61 +12,52 @@ Plik ten zawiera funkcje odpowiedzialne za komunikację z OpenAI API i generowan
 
 - **Typ:** `async function`
 - **Parametry:**
-  - `description` *(string)* – opis zadania podany przez użytkownika
-- **Zwraca:** `Promise<object>` – struktura zadania: `{ title, description, dueDate?, notes? }`
+  - `description` _(string)_ – opis zadania podany przez użytkownika
+- **Zwraca:** `Promise<object>` – struktura zadania `{ title, description, dueDate?, difficulty? }`
+- **Model:** `gpt-4o`
+- **Mechanizm:** `function_call` z `tools` (OpenAI)
 
 ---
 
 ## ⚙️ Jak działa
 
-1. Generuje prompt systemowy z aktualną datą
-2. Wysyła zapytanie do modelu `gpt-4o` (OpenAI)
-3. Oczekuje odpowiedzi w formacie JSON
-4. Czyści markdown (```json)
-5. Próbuje sparsować JSON
+1. Tworzy wiadomości `system` i `user` z aktualną datą i opisem zadania
+2. Określa `tools.function` (nazwa: `create_task`) z polami:
+   - `title` (string, required)
+   - `description` (string, required)
+   - `dueDate` (string, opcjonalnie, format ISO)
+   - `notes` (opcjonalnie, jeśli GPT uzna to za potrzebne)
+   - `difficulty` (opcjonalnie, skala 1–5)
+3. Wywołuje model `gpt-4o` z parametrem `tool_choice`
+4. Parsuje `tool_calls[0].function.arguments` jako JSON
 
 ---
 
-## 🛡️ Fallback
+## ✅ Uwagi
 
-- Jeśli `JSON.parse()` nie powiedzie się:
-  - Treść odpowiedzi zostaje zapisana jako `notes`
-  - Tworzony jest obiekt zadania z pustym `title`, oryginalnym `description` i notatką
-  - Surowa odpowiedź GPT jest zapisywana do pliku `logs/gpt_fallbacks.log`
+- Brak fallbacku tekstowego – wymuszony jest poprawny JSON przez OpenAI function calling
+- `notes` może być zwrócone, ale nie jest już zapisywane domyślnie
+- `difficulty` jest opcjonalne, ale AI powinno je uzupełnić w większości przypadków
+- Funkcja nie zapisuje do Mongo – tylko zwraca strukturę do kontrolera
 
 ---
 
 ## 📥 Przykład użycia w kontrolerze
 
 ```js
-const { getTaskStructureFromAI } = require("../services/gptService");
+const { getTaskStructureFromAI } = require("../services/gptService.function");
 
 exports.createWithAI = async (req, res) => {
-  const { description } = req.body;
-  const taskData = await getTaskStructureFromAI(description);
-  // tworzenie zadania w MongoDB
+  const structure = await getTaskStructureFromAI(req.body.description);
+  const task = new Task({ ...structure, ownerId: req.user.id });
+  await task.save();
 };
 ```
 
 ---
 
-## 🧪 Logowanie błędów
+## 🔐 Bezpieczeństwo i jakość danych
 
-- Funkcja pomocnicza: `logGPTFallback(raw, userDescription)`
-- Zapisuje datę, opis użytkownika i nieparsowalną odpowiedź GPT
-- Plik logu: `logs/gpt_fallbacks.log`
-
----
-
-## 🔐 Bezpieczeństwo
-
-- Bieżąca data w promptcie pomaga GPT rozpoznawać daty typu „do 15 maja”
-- Brak przesyłania klucza OpenAI do frontend
-
----
-
-## 🧩 Planowane rozszerzenia
-
-- Dodanie `difficulty` (ocena trudności przez GPT)
-- Obsługa promptów dla podsumowania zamknięcia (`/api/tasks/:id/close`)
-- Funkcja pomocnicza `getSimilarTasksByEmbedding()` (osobny moduł)
+- Aktualna data pomaga w kontekście "do 15 maja"
+- Zwięzły prompt systemowy oszczędza tokeny
+- Function calling zapewnia pełną kontrolę nad strukturą danych
