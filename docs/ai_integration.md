@@ -3,104 +3,111 @@
 ## 🎯 Cel integracji
 
 Sztuczna inteligencja (GPT-4o) wspiera użytkownika w zarządzaniu zadaniami i rozwiązywaniu problemów.
-GPT pełni rolę inteligentnego asystenta, który rozumie intencję użytkownika i pomaga w tworzeniu, analizie i domykaniu zadań.
+GPT pełni rolę inteligentnego asystenta, który rozumie intencję użytkownika i pomaga w tworzeniu, analizie i domykaniu zadań. Dzięki zastosowaniu mechanizmu function calling, AI jest w stanie strukturalnie przetwarzać dane i działać w sposób przewidywalny, w pełni zgodny z wymaganiami aplikacji.
 
 ---
 
 ## 🔐 Uwierzytelnianie do OpenAI
 
-- Użytkownik podaje własny klucz API do OpenAI
-- Klucz przesyłany jest tylko do backendu (planowane: szyfrowanie AES)
-- Frontend nie ma dostępu do klucza
+- Użytkownik podaje własny klucz API do OpenAI (przekazywany raz, np. z poziomu frontendu)
+- Klucz przesyłany wyłącznie do backendu – frontend nie ma do niego dostępu
+- Planowane: szyfrowanie klucza po stronie backendu (AES)
+- Kontekst GPT jest resetowany po każdym zamknięciu zadania – model działa stateless
 
 ---
 
 ## 🔗 Komunikacja z API OpenAI – Function Calling
 
-System korzysta z mechanizmu `function_calling` w GPT-4o do:
+System wykorzystuje wyłącznie mechanizm `function_calling` GPT-4o.
+Nie ma fallbacków do generowania tekstu – wszystkie odpowiedzi muszą mieć strukturę JSON.
 
-- generowania struktury nowego zadania (`create_task`),
-- oceny jakości podsumowania (`assess_summary`),
-- wygładzenia podsumowania na życzenie użytkownika (`improve_summary`).
+### Obsługiwane funkcje:
+
+- `create_task` – generowanie struktury zadania
+- `assess_summary` – ocena jakości opisu rozwiązania
+- `improve_summary` – wygładzenie zaakceptowanego lub wymuszonego `summary`
+
+Wszystkie funkcje są wykonywane w tym samym języku, w jakim użytkownik przesłał input (`Always respond in the same language as the user's input`).
 
 ---
 
 ## 🧠 Zastosowania GPT w aplikacji
 
-### ✅ Wspierane funkcje:
+### 1. Tworzenie zadania (AI)
 
-1. **Tworzenie zadania**
+- Endpoint: `POST /api/tasks/ai-create`
+- Użytkownik podaje `description`, a GPT generuje:
+  - `title` (krótki, rzeczowy tytuł)
+  - `description` (szczegółowy opis zoptymalizowany pod embeddingi)
+  - `difficulty` (1–5)
+  - `dueDate` (jeśli występuje)
+- Funkcja: `getTaskStructureFromAI()`
 
-   - Generowane pola: `title`, `description`, `dueDate?`, `difficulty?`
-   - Funkcja: `getTaskStructureFromAI(description)`
+### 2. Zamykanie zadania (AI)
 
-2. **Ocena trudności (`difficulty`)**
+- Endpoint: `PATCH /api/tasks/:id/ai-close`
+- Użytkownik podaje `summary`
+- AI ocenia jakość (`getSummaryAssessment`)
+  - Jeśli wystarczające: wygładza i zapisuje (`improveSummary`)
+  - Jeśli za krótkie lub nieprzydatne: zwraca błąd
+  - Można wymusić użycie `summary`, nawet słabego (`force: true`)
+- `sourceTaskId` nie jest dozwolone w tym endpointzie
 
-   - GPT ocenia trudność na podstawie opisu użytkownika (skala 1–5)
+### 3. Embedding i podobne zadania
 
-3. **Zamykanie zadania (AI jako wsparcie)**
-
-   - AI ocenia jakość podsumowania użytkownika (`getSummaryAssessment`)
-   - Jeśli opis jest zbyt słaby – użytkownik może go świadomie wymusić
-   - W takim przypadku AI tylko wygładza tekst (`improveSummary`)
-   - Jeśli użytkownik nie poda `summary`, może wskazać `sourceTaskId` – kopiujemy opis z innego zadania (bez udziału AI)
-
-4. **Semantyczne porównywanie zadań**
-
-   - Wykorzystanie modelu `text-embedding-3-small`
-   - Porównywanie z embeddingami zadań `status: closed`
-   - Top 5 z `similarity >= 0.75` przypisywane do `similarTasks`
-
-5. **Tworzenie zadań przez AI**
-   - Endpoint: `POST /api/tasks/ai-create`
-   - Po zapisaniu: automatyczna analiza embedding i przypisanie `similarTasks`
+- Po utworzeniu zadania (AI) backend generuje embedding (`text-embedding-3-small`)
+- Embedding porównywany z zakończonymi zadaniami (`cosine similarity`)
+- Przypisuje maksymalnie 5 zadań (`similarity ≥ 0.75`)
+- Zadania trafiają do `similarTasks`, ale nie są używane automatycznie
 
 ---
 
 ## ⚙️ Obsługa backendowa
 
-- `gptService.function.js`:
+### gptService.function.js
 
-  - `getTaskStructureFromAI(description)` – function calling `create_task`
-  - `getSummaryAssessment(description, userInput)` – function calling `assess_summary`
-  - `improveSummary(userInput)` – function calling `improve_summary`
+- `getTaskStructureFromAI(description)`
+- `getSummaryAssessment(taskDescription, userInput)`
+- `improveSummary(userInput)`
 
-- `aiSummaryService.js`
+### aiSummaryService.js
 
-  - Obsługuje wszystkie ścieżki logiczne dla zamykania zadania:
-    - własny opis,
-    - wymuszenie krótkiego opisu,
-    - kopiowanie `summary` z innego zadania,
-    - brak danych → błąd
+- `processTaskClosure({ task, summary, force })`
+  - Odmowa przyjęcia zbyt słabego `summary`
+  - Wymuszenie `force: true` – wtedy AI wygładza mimo ostrzeżenia
+  - Brak danych → błąd
 
-- `services/embeddingService.js`
-  - Generuje embeddingi
-  - Porównuje z zadaniami z bazy
-  - Aktualizuje `embedding`, `similarTasks` nowego zadania
+### embeddingService.js
+
+- Tworzy embedding na podstawie `title + description`
+- Porównuje z zakończonymi zadaniami
+- Przypisuje `similarTasks` (max 5, threshold ≥ 0.75)
 
 ---
 
 ## 🔐 Bezpieczeństwo
 
-- Klucz OpenAI nie trafia do frontendu
-- Planowane: szyfrowanie klucza użytkownika (AES)
-- Resetowanie kontekstu po zakończeniu zadania
+- Klucz OpenAI dostępny tylko backendowi
+- Planowane: szyfrowanie klucza (AES)
+- Reset kontekstu po każdej operacji – brak zapamiętywania wcześniejszych promptów
+- AI działa tylko przy `PATCH /ai-close` – nigdy przy `/close`
 
 ---
 
 ## 📌 Planowane rozszerzenia
 
-- Uczenie się na podstawie zadań podobnych (zatwierdzanych ręcznie)
-- Sugestie AI (otwarte zadania, najłatwiejsze, najpilniejsze)
-- Eksperckie profile AI (tryb techniczny, menedżerski, itd.)
-- Endpoint `POST /api/ai/similar-tasks` – wyszukiwanie podobnych przypadków
+- Wyszukiwanie podobnych zadań przez `POST /api/ai/similar-tasks`
+- Sugestie AI: otwarte zadania, najłatwiejsze, najbardziej pilne
+- Tryby eksperckie GPT: np. "debugger", "mentor", "projektant"
+- Analiza jakości rozwiązań historycznych
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
+- `project_overview.md`
 - `project_roadmap.md`
-- `services.md`
-- `utils.md`
+- `controllers.md`
 - `validators.md`
 - `backend_overview.md`
+- `api_spec.md`

@@ -13,24 +13,19 @@
 
 Wszystkie poniższe trasy **wymagają autoryzacji JWT** (middleware `auth.js`).
 
-| Metoda | Ścieżka                   | Opis                                                               | Middleware                                         |
-| ------ | ------------------------- | ------------------------------------------------------------------ | -------------------------------------------------- |
-| POST   | `/api/tasks`              | Tworzy nowe zadanie                                                | `auth.js`, `validateTaskInput`, `validate.js`      |
-| GET    | `/api/tasks`              | Pobiera wszystkie zadania użytkownika                              | `auth.js`                                          |
-| PUT    | `/api/tasks/:id`          | Edytuje dane istniejącego zadania                                  | `auth.js`, `validateTaskInput`, `validate.js`      |
-| POST   | `/api/tasks/:id/close`    | [NIEUŻYWANE] Stara wersja zamykania zadania                        | `auth.js`                                          |
-| POST   | `/api/tasks/:id/ai-close` | Zamyka zadanie z pomocą AI lub kopiując `summary` z innego zadania | `auth.js`, `validateCloseTaskInput`, `validate.js` |
-| POST   | `/api/tasks/ai-create`    | Tworzy zadanie z pomocą GPT-4o                                     | `auth.js`                                          |
+| Metoda | Ścieżka                   | Opis                                                              | Middleware                                     |
+| ------ | ------------------------- | ----------------------------------------------------------------- | ---------------------------------------------- |
+| POST   | `/api/tasks`              | Tworzy nowe zadanie ręcznie                                       | `auth`, `validateTaskInput`, `validate`        |
+| GET    | `/api/tasks`              | Pobiera wszystkie zadania użytkownika                             | `auth`                                         |
+| PUT    | `/api/tasks/:id`          | Edytuje dane istniejącego zadania                                 | `auth`, `validateTaskInput`, `validate`        |
+| PATCH  | `/api/tasks/:id/close`    | Zamyka zadanie kopiując `summary` z innego zadania                | `auth`                                         |
+| PATCH  | `/api/tasks/:id/ai-close` | Zamyka zadanie z pomocą AI (ocena/wygładzenie `summary`, `force`) | `auth`, `validateCloseTaskInput`, `validate`   |
+| POST   | `/api/tasks/ai-create`    | Tworzy zadanie z pomocą GPT-4o                                    | `auth`, `validateCreateTaskWithAI`, `validate` |
 
 ---
 
-### Uwaga:
+## 🧩 Uwagi
 
-Trasa `/api/tasks/:id/ai-close` obsługuje wszystkie aktualne scenariusze zamykania zadania:
-
-- użytkownik wpisuje opis,
-- użytkownik wymusza opis (`force`),
-- użytkownik wybiera `sourceTaskId`,
-- brak danych → błąd.
-
-Trasa `/api/tasks/:id/close` została zachowana tymczasowo dla zgodności, ale nie jest już aktywnie używana.
+- Endpoint `/api/tasks/:id/ai-close` nie obsługuje `sourceTaskId`.
+- Endpoint `/api/tasks/:id/close` służy **wyłącznie do kopiowania** `summary` z innego zadania.
+- Oba endpointy wykorzystują `PATCH`, ponieważ aktualizują tylko część zasobu (`status`, `summary`).

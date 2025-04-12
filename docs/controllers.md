@@ -4,13 +4,12 @@
 
 ### POST /api/auth/register
 
-- Rejestruje nowego użytkownika.
-- Hasło haszowane (`bcrypt`), zwracany JWT.
+Rejestruje nowego użytkownika.
+Zwraca JWT po rejestracji.
 
 ### POST /api/auth/login
 
-- Sprawdza poprawność danych logowania.
-- Zwraca token JWT przy sukcesie.
+Loguje użytkownika i zwraca token JWT.
 
 ---
 
@@ -18,83 +17,140 @@
 
 ### POST /api/tasks
 
-- Tworzy nowe zadanie przypisane do użytkownika.
-- Walidacja pól: `description`, `title`, `status`, `dueDate`.
-
----
-
-### POST /api/tasks/ai-create
-
-- Tworzy zadanie na podstawie opisu użytkownika z pomocą GPT-4o (function calling).
-- Wywołuje `getTaskStructureFromAI(description)` → dane: `title`, `description`, `dueDate?`, `difficulty?`
-- Zapisuje zadanie do MongoDB
-- Następnie uruchamia `generateAndAttachEmbedding(taskId)`:
-  - generuje embedding (`text-embedding-3-small`)
-  - przypisuje `similarTasks` (top 5 z `similarity >= 0.75`)
-- Walidacja: `description` minimum 5 znaków
-
-**Przykład body:**
-
-```json
-{
-  "description": "Nie działa API uczelni, prawdopodobnie brak Authorization. Mam czas do 20 maja 2025"
-}
-```
-
-**Typowa odpowiedź:**
-
-```json
-{
-  "title": "Naprawa API uczelni",
-  "description": "Zidentyfikuj i napraw problem z API uczelni...",
-  "dueDate": "2025-05-20",
-  "difficulty": 4,
-  "similarTasks": [...],
-  "embedding": [...]
-}
-```
-
----
-
-### POST /api/tasks/:id/ai-close
-
-Zamyka zadanie z pomocą AI lub kopiowania istniejącego podsumowania.
-
-- Jeśli `summary` jest dostarczone, ma ≥ 40 znaków oraz pozwala na stworzenie watościowego opisu, GPT wygładza i zapisuje
-- Jeśli `summary` jest zbyt krótkie, system wymaga `force: true` i tylko wygładza
-- Jeśli użytkownik wskaże `sourceTaskId`, kopiujemy `summary` z tego zadania
-- Jeśli `summary` i `sourceTaskId` są puste – zwracany jest błąd
+Tworzy nowe zadanie ręcznie.
 
 **Body:**
 
 ```json
 {
-  "summary": "Zmieniono token w webhooku i przetestowano działanie.",
-  "force": false,
-  "sourceTaskId": null
+  "description": "Opis problemu",
+  "title": "Opcjonalny tytuł",
+  "status": "open",
+  "dueDate": "2025-05-01",
+  "difficulty": 3
+}
+```
+
+### POST /api/tasks/ai-create
+
+Tworzy nowe zadanie z pomocą AI (GPT-4o).
+
+- Wymaga tylko pola `description`
+- GPT generuje: `title`, `description`, `dueDate?`, `difficulty`
+- Po zapisaniu zadania automatycznie generowany jest embedding i przypisywane są `similarTasks`
+
+**Body:**
+
+```json
+{
+  "description": "Nie działa webhook GitHub"
+}
+```
+
+---
+
+### PATCH /api/tasks/:id/ai-close
+
+Zamyka zadanie z pomocą AI.
+
+- Wymaga: `summary` (opis rozwiązania)
+- Opcjonalnie: `force: true` – jeśli opis jest za krótki lub zbyt słaby
+- AI ocenia jakość podsumowania i wygładza je
+- Jeśli opis jest nieakceptowalny i `force` nie jest ustawiony → zwraca błąd
+- Nie można używać `sourceTaskId` w tym endpointzie
+
+**Body:**
+
+```json
+{
+  "summary": "Poprawiono konfigurację webhooka GitHub.",
+  "force": false
 }
 ```
 
 **Odpowiedzi:**
 
-- 200 OK: zadanie zamknięte, `summary` zapisane
-- 400: brak podsumowania i brak `sourceTaskId`
-- 400: opis za krótki i brak `force`
+- 200 OK – zadanie zamknięte z podsumowaniem
+- 400 – podsumowanie zbyt słabe bez `force`
+- 400 – brak pola `summary`
+
+---
+
+### PATCH /api/tasks/:id/close
+
+Zamyka zadanie poprzez skopiowanie `summary` z innego zadania.
+
+- Wymaga: `sourceTaskId` (ID zakończonego zadania)
+- Nie można przesyłać `summary`
+- AI nie bierze udziału
+- Wartość `summary` kopiowana 1:1 z innego zadania
+
+**Body:**
+
+```json
+{
+  "sourceTaskId": "661cabc..."
+}
+```
+
+**Odpowiedzi:**
+
+- 200 OK – zadanie zamknięte, `summary` skopiowane
+- 400 – brak `sourceTaskId`
+- 400 – wskazane zadanie nie istnieje lub nie zawiera `summary`
 
 ---
 
 ### GET /api/tasks
 
-- Zwraca wszystkie zadania zalogowanego użytkownika (`ownerId`)
+Zwraca listę zadań użytkownika.
+
+**Response:**
+
+```json
+[
+  {
+    "_id": "...",
+    "title": "...",
+    "description": "...",
+    "status": "open",
+    "difficulty": 3,
+    "dueDate": "...",
+    "createdAt": "...",
+    "ownerId": "...",
+    "summary": "...",
+    "similarTasks": [...],
+    "embedding": [...]
+  }
+]
+```
 
 ---
 
 ### PUT /api/tasks/:id
 
-- Aktualizuje istniejące zadanie (tytuł, opis, termin, status)
+Aktualizuje istniejące zadanie.
+
+- Aktualizować można: `title`, `description`, `dueDate`, `status`
+
+**Body:**
+
+```json
+{
+  "title": "Nowy tytuł",
+  "description": "Nowy opis",
+  "dueDate": "2025-05-10",
+  "status": "closed"
+}
+```
+
+**Odpowiedzi:**
+
+- 200 OK – zadanie zaktualizowane
+- 404 – zadanie nie istnieje lub nie należy do użytkownika
 
 ---
 
 ## 🔐 Wymagania JWT
 
-Wszystkie powyższe metody poza `/auth/*` wymagają tokena JWT (`Authorization: Bearer <token>`)
+Wszystkie trasy `/api/tasks/*` wymagają autoryzacji przez `Bearer <JWT>`.

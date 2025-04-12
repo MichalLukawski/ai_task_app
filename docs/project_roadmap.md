@@ -1,87 +1,91 @@
-# 📍 AI Task App – Roadmapa projektu
+# 🗺️ Roadmap projektu – AI Task App
 
-## 🔄 Etap 0: Fundament backendu (**ZREALIZOWANE**)
-
-- [x] Inicjalizacja projektu Node.js
-- [x] Konfiguracja Express i MongoDB
-- [x] Model użytkownika (`User.js`)
-- [x] Rejestracja i logowanie z JWT (bazowe endpointy)
-- [x] Middleware `auth.js` do ochrony tras
-- [x] Obsługa błędów i kodów odpowiedzi (`utils/responseHandler.js`)
-- [x] Struktura odpowiedzi: `sendSuccess`, `sendError`
+Dokument ten przedstawia harmonogram i etapy rozwoju aplikacji AI Task App, wraz z podziałem funkcjonalnym oraz stanem realizacji. Uwzględniono główne filary systemu: zadania, AI, embeddingi, backend, frontend oraz kierunki rozwoju.
 
 ---
 
-## 🚀 Etap 1: System zadań (**ZREALIZOWANE**)
+## 🔹 Etap 0 – Fundament backendu (✅ zrealizowano)
 
-- [x] Model `Task.js` z polami: opis, status, daty, notatki AI
-- [x] Dodanie pola `dueDate` (termin wykonania) + obsługa
-- [x] Endpoint `POST /api/tasks` – tworzenie zadania
-- [x] Endpoint `POST /api/tasks/:id/ai-close` – zamykanie z pomocą AI / kopiowania
-- [x] Endpoint `GET /api/tasks` – lista zadań użytkownika
-- [x] Endpoint `PUT /api/tasks/:id` – edycja
-- [x] Autoryzacja i filtracja po `ownerId`
-- [x] Walidacja pól (`express-validator`)
-- [x] Middleware `validate.js` i `taskValidator.js`
+- Inicjalizacja projektu Node.js + Express
+- Konfiguracja MongoDB (lokalnie i w chmurze)
+- Uwierzytelnianie użytkownika (JWT)
+- Middleware: autoryzacja, walidacja, obsługa błędów
+- Model `User`, podstawowe operacje (rejestracja, logowanie)
+- Struktura kodu z `controllers`, `routes`, `services`, `validators`, `utils`
 
 ---
 
-## 🤖 Etap 2: Integracja GPT (**ZREALIZOWANE**)
+## 🔹 Etap 1 – System zarządzania zadaniami (✅ zrealizowano)
 
-- [x] Połączenie z OpenAI API (model GPT-4o)
-- [x] Endpoint `POST /api/tasks/ai-create` – generowanie zadania
-- [x] Mechanizm function calling (`create_task`, `assess_summary`, `improve_summary`)
-- [x] Obsługa `difficulty`
-- [x] Weryfikacja jakości podsumowania (`getSummaryAssessment`)
-- [x] Wygładzanie słabych podsumowań (`improveSummary`)
-- [x] Możliwość świadomego wymuszenia opisu przez użytkownika (`force`)
-- [x] Możliwość użycia `sourceTaskId` – kopiowanie podsumowania
-- [x] Brak automatycznego generowania `summary` przez AI z podobnych zadań
-- [ ] Przechowywanie i szyfrowanie klucza API
+- Model `Task.js` zawierający: `description`, `title`, `dueDate`, `difficulty`, `summary`, `status`, `ownerId`, `similarTasks`, `embedding`
+- Endpointy:
+  - `POST /api/tasks` – tworzenie zadania ręcznego
+  - `PATCH /api/tasks/:id` – edycja wybranych pól (`PATCH` zamiast `PUT`)
+  - `GET /api/tasks` – lista zadań użytkownika
+- Walidatory `validateTaskInput`, `validateUpdateTaskInput`
+- Middleware do spójnej obsługi błędów
 
 ---
 
-## 🧠 Etap 3: Semantyczna historia (**PLANOWANE**)
+## 🔹 Etap 2 – Integracja AI (✅ zrealizowano)
 
-- [x] Tworzenie embeddingów z opisów zadań (`text-embedding-3-small`)
-- [x] Porównanie nowego zadania z historią przez cosine similarity
-- [x] Top 5 zadań (`similarity >= 0.75`) zapisywane jako `similarTasks`
-- [ ] Endpoint `POST /api/ai/similar-tasks` – ręczne wyszukiwanie podobnych
-- [ ] Użytkownik potwierdza podobieństwo → trafiają do `similarTasks`
-- [ ] Wizualizacja podobieństw i ich użyteczności
-
----
-
-## 🎨 Etap 4: Frontend (**DO ZROBIENIA**)
-
-- [ ] Inicjalizacja projektu React + Tailwind
-- [ ] Formularz logowania i rejestracji
-- [ ] Dashboard z listą zadań
-- [ ] Formularz tworzenia zadania
-- [ ] Widok szczegółów i zamykanie zadań (`ai-close`)
-- [ ] Wybór `sourceTaskId`, komunikaty AI, przycisk „Force”
+- Połączenie z OpenAI GPT-4o (API + function calling)
+- Endpoint `POST /api/tasks/ai-create`:
+  - tylko `description` jako input
+  - generowanie `title`, `description`, `difficulty`, `dueDate` (jeśli występuje)
+- Embeddingi generowane automatycznie (`text-embedding-3-small`)
+- Automatyczne przypisywanie `similarTasks` (similarity ≥ 0.75)
 
 ---
 
-## 📊 Etap 5: Rozwój i produkcja (**PLANOWANE**)
+## 🔹 Etap 3 – Zamykanie zadań (✅ zrealizowano)
 
-- [ ] Tryb zespołowy i organizacje
-- [ ] Role: admin, user, readonly
-- [ ] Eksport danych do CSV / JSON
-- [ ] Widok statystyk użytkownika
-- [ ] Notyfikacje email / webhooki
-- [ ] Wersja mobilna (PWA)
-- [ ] Backup MongoDB
+- Endpoint `PATCH /api/tasks/:id/ai-close`:
+  - `summary` oceniany przez AI (jakość, styl)
+  - Jeśli zbyt słaby → AI odrzuca
+  - Użytkownik może wymusić użycie (`force: true`)
+- Endpoint `PATCH /api/tasks/:id/close`:
+  - Kopiowanie `summary` z innego zadania (`sourceTaskId`)
+  - Brak użycia AI, brak własnego `summary`
+- Pełna separacja AI vs manualne kopiowanie (zabezpieczone backendem)
 
 ---
 
-## 🔚 Podsumowanie
+## 🔹 Etap 4 – Frontend (⏳ planowany)
 
-Etap 2 (GPT) oraz logika zamykania zadań zostały ukończone w pełni. System obsługuje:
+- React + TailwindCSS
+- Dashboard z listą zadań (`GET`)
+- Formularze tworzenia (`POST`) i edycji (`PATCH`)
+- Interfejs do zamykania:
+  - własny opis → `/ai-close`
+  - kopiowanie → `/close`
+- Obsługa sesji JWT
+- Wizualizacja podobnych zadań (`similarTasks`)
 
-- ocenę jakości `summary`
-- wygładzanie stylu
-- świadome wymuszenie użycia opisu
-- kopiowanie z innego zadania
+---
 
-Brak automatycznego tworzenia `summary` na podstawie `similarTasks` – użytkownik zawsze musi zadecydować.
+## 🔹 Etap 5 – Historia i semantyczne wyszukiwanie (⏳ planowane)
+
+- Endpoint `POST /api/ai/similar-tasks` do wyszukiwania podobnych zadań
+- Możliwość ręcznego oznaczania trafności (`czy podobne było pomocne`)
+- Budowa wewnętrznej bazy wiedzy użytkownika
+
+---
+
+## 🔹 Etap 6 – Rozszerzenia i wersja produkcyjna (⏳ planowane)
+
+- Role `admin`, `readonly`, organizacje
+- Eksport danych (CSV/JSON)
+- Webhooki, powiadomienia email
+- Widok statystyk i analizy zadań
+- Wersja mobilna (PWA)
+- Backup MongoDB + szyfrowanie klucza OpenAI (AES)
+
+---
+
+## 📌 Stan na dziś
+
+- Etapy 0–3 zostały zrealizowane w całości
+- Projekt jest gotowy do implementacji frontendowej
+- Backend obsługuje AI, embeddingi, ocenę jakości podsumowań i pełne rozdzielenie logiki `/close` i `/ai-close`
+- Wszystkie operacje zgodne z REST (`POST`, `PATCH`)

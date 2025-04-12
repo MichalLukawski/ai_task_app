@@ -1,10 +1,14 @@
-# AI Task App – API Specification
+# 📘 Specyfikacja API – AI Task App (wersja polska)
 
-## 📘 API: Authentication
+Poniżej znajduje się pełna dokumentacja API aplikacji AI Task App – zawierająca strukturę endpointów, wymagane pola, odpowiedzi i zasady działania dla każdego przypadku. Wszystkie trasy (poza `/auth`) wymagają tokena JWT (`Authorization: Bearer <token>`).
+
+---
+
+## 🔐 Autoryzacja
 
 ### POST /api/auth/register
 
-Rejestracja nowego użytkownika.
+Rejestruje nowego użytkownika.
 
 **Body:**
 
@@ -28,7 +32,7 @@ Rejestracja nowego użytkownika.
 
 ### POST /api/auth/login
 
-Logowanie użytkownika.
+Loguje użytkownika i zwraca token JWT.
 
 **Body:**
 
@@ -46,123 +50,164 @@ Logowanie użytkownika.
   "status": "success",
   "message": "Login successful",
   "data": {
-    "token": "JWT_TOKEN_HERE"
+    "token": "JWT_TOKEN"
   }
 }
 ```
 
 ---
 
-## 📘 API: Tasks
+## 🧠 Zarządzanie zadaniami
 
 ### POST /api/tasks
 
-Tworzenie nowego zadania (manualnie).
+Tworzy nowe zadanie ręcznie (bez AI).
 
-**Headers:** Authorization: Bearer <JWT>  
+- Pole wymagane: `description` (min. 5 znaków)
+- Pola opcjonalne: `title`, `dueDate`, `status`, `difficulty`
+
 **Body:**
 
 ```json
 {
-  "description": "Nie działa API uczelni",
-  "title": "Awaria API",
-  "dueDate": "2025-05-01"
+  "description": "Zintegrować serwis z nowym API uczelni",
+  "title": "Integracja z API",
+  "dueDate": "2025-05-01",
+  "difficulty": 3
 }
 ```
 
 **Response:**
 
-```json
-{
-  "status": "success",
-  "message": "Task created successfully",
-  "data": {
-    "_id": "...",
-    "description": "...",
-    "title": "...",
-    "status": "open",
-    "dueDate": "...",
-    "createdAt": "..."
-  }
-}
-```
+- 201 Created – zadanie utworzone
 
 ---
 
 ### POST /api/tasks/ai-create
 
-Tworzenie zadania z pomocą GPT-4o (function calling).
+Tworzy zadanie z pomocą GPT-4o (function calling).
 
-**Headers:** Authorization: Bearer <JWT>  
+- Wymaga: `description` (string)
+- GPT generuje: `title`, `description`, `dueDate?`, `difficulty`
+- Backend generuje embedding i przypisuje `similarTasks` (max 5)
+
 **Body:**
 
 ```json
 {
-  "description": "Nie działa API uczelni, prawdopodobnie brak nagłówka Authorization. Mam czas do 15 kwietnia"
+  "description": "Po uruchomieniu aplikacja mobilna natychmiast się zamyka"
 }
 ```
 
 **Response:**
 
+- 201 Created – zadanie utworzone na podstawie odpowiedzi AI
+
+---
+
+### PATCH /api/tasks/:id
+
+Aktualizuje istniejące zadanie.
+
+- Można zaktualizować: `title`, `description`, `dueDate`, `status`
+
+**Body:**
+
 ```json
 {
-  "status": "success",
-  "message": "AI-generated task created",
-  "data": {
+  "title": "Zmieniony tytuł",
+  "description": "Poprawiony opis",
+  "dueDate": "2025-05-10",
+  "status": "closed"
+}
+```
+
+**Response:**
+
+- 200 OK – zadanie zaktualizowane
+- 404 – zadanie nie istnieje lub nie należy do użytkownika
+
+---
+
+### PATCH /api/tasks/:id/ai-close
+
+Zamyka zadanie z pomocą AI.
+
+- Pole wymagane: `summary` – opis rozwiązania
+- AI ocenia, czy opis jest wystarczający i wygładza go
+- Jeśli opis jest zbyt krótki lub słaby → zwraca błąd
+- Użytkownik może wymusić użycie opisu przez `force: true`
+- Pole `sourceTaskId` nie jest obsługiwane – kopiowanie tylko przez `/close`
+
+**Body:**
+
+```json
+{
+  "summary": "Zaktualizowano konfigurację webhooka i przetestowano połączenie.",
+  "force": false
+}
+```
+
+**Response:**
+
+- 200 OK – zadanie zamknięte z podsumowaniem wygenerowanym przez AI
+- 400 – podsumowanie zbyt słabe bez `force`
+- 400 – brak pola `summary`
+
+---
+
+### PATCH /api/tasks/:id/close
+
+Zamyka zadanie przez skopiowanie `summary` z innego, wcześniej zamkniętego zadania.
+
+- Pole wymagane: `sourceTaskId` (ID Mongo zadania, z którego kopiujemy podsumowanie)
+- Pole `summary` nie może być obecne
+- Nie wykorzystuje AI
+
+**Body:**
+
+```json
+{
+  "sourceTaskId": "6621a6f6e4a8d305ccf8d4d1"
+}
+```
+
+**Response:**
+
+- 200 OK – zadanie zamknięte, `summary` zostało skopiowane
+- 400 – brak `sourceTaskId` lub `summary` nie istnieje w źródłowym zadaniu
+
+---
+
+### GET /api/tasks
+
+Zwraca wszystkie zadania należące do zalogowanego użytkownika.
+
+**Response:**
+
+```json
+[
+  {
     "_id": "...",
-    "description": "...",
     "title": "...",
-    "dueDate": "2025-04-15",
-    "difficulty": 3,
-    "similarTasks": [...],
-    "embedding": [...],
+    "description": "...",
     "status": "open",
+    "difficulty": 2,
+    "dueDate": "2025-05-10",
+    "summary": null,
     "createdAt": "...",
-    "ownerId": "..."
+    "ownerId": "...",
+    "similarTasks": [...],
+    "embedding": [...]
   }
-}
+]
 ```
 
 ---
 
-### POST /api/tasks/:id/ai-close
+## 📎 Uwagi ogólne
 
-Zamykanie zadania z pomocą AI lub kopiowania podsumowania z innego zadania.
-
-**Headers:** Authorization: Bearer <JWT>  
-**Body (przykładowy):**
-
-```json
-{
-  "summary": "Zmieniono konfigurację webhooka GitHub i przetestowano działanie.",
-  "force": false,
-  "sourceTaskId": null
-}
-```
-
-**Możliwe scenariusze:**
-
-- `summary` >= 40 znaków oraz tekst, który pozwala na stworzenie użytecznego opisu → AI wygładza i zapisuje
-- `summary` < 40 znaków → wymagane `force: true`
-- `sourceTaskId` → kopiujemy `summary` z innego zadania (bez AI)
-- brak `summary` i `sourceTaskId` → błąd
-
-**Responses:**
-
-- 200 OK – zadanie zamknięte, `summary` zapisane
-- 400 – opis zbyt krótki bez `force`
-- 400 – brak danych do zamknięcia (`summary` lub `sourceTaskId`)
-
----
-
-## 📘 API: System
-
-### GET /api/health
-
-Sprawdzenie działania backendu.
-
----
-
-## 📌 Planowane rozszerzenia API
-
-- `POST /api/ai/similar-tasks` – zwraca podobne zadania na podstawie embeddingów
+- Wszystkie trasy `/api/tasks/*` wymagają tokena JWT w nagłówku:  
+  `Authorization: Bearer <JWT>`
+- `summary` można wysyłać tylko w `/ai-close` i zawsze podlega ocenie przez AI
+- Endpoint `/close` obsługuje wyłącznie kopiowanie gotowego `summary` z innego zadania

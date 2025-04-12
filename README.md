@@ -1,28 +1,37 @@
 # AI Task App
 
-Aplikacja webowa, która pełni funkcję osobistego asystenta AI do zarządzania zadaniami. Aplikacja będzie hostowana lokalnie na moim serwerze domowym i dostępna z dowolnego urządzenia. Dane będą zapisywane w MongoDB (zarówno lokalnie, jak i w kopii chmurowej MongoDB Atlas). System wykorzystuje GPT-4o oraz embeddingi do wspomagania użytkownika w tworzeniu, przeszukiwaniu i zamykaniu zadań.
+AI Task App to webowa aplikacja wspierana przez GPT-4o, która pełni funkcję osobistego asystenta technicznego do zarządzania zadaniami. Aplikacja działa lokalnie (z możliwością wdrożenia w chmurze) i zapisuje dane w MongoDB. System umożliwia tworzenie zadań z pomocą AI, przypisywanie podobnych przypadków oraz inteligentne zamykanie zadań na podstawie oceny podsumowania.
 
 ---
 
 ## 🎯 Cel systemu
 
-Pomoc osobom wykonującym złożone zadania (np. programistom, naukowcom, administratorom IT) w dokumentowaniu problemów i odzyskiwaniu rozwiązań na podstawie przeszłych przypadków. System pełni rolę asystenta AI oraz bazy wiedzy eksperckiej.
+Pomoc osobom realizującym złożone, techniczne zadania – takim jak programiści, administratorzy, analitycy czy naukowcy – w dokumentowaniu pracy, analizowaniu podobnych przypadków i odzyskiwaniu wiedzy w oparciu o historię rozwiązań. System działa jako:
+
+- osobisty asystent AI (GPT-4o)
+- baza wiedzy eksperckiej (embeddingi)
+- narzędzie produktywności (planowanie, przypomnienia)
 
 ---
 
 ## 🔐 System kont i logowania
 
-- Rejestracja użytkownika tylko przez link od administratora
-- Potwierdzenie e-maila po rejestracji
-- Logowanie przez JWT
-- Role: `admin` i `user`
+- Rejestracja wyłącznie przez link od administratora
+- Weryfikacja e-mail
+- JWT jako token autoryzacyjny
+- Role: `user`, `admin` (rozszerzenia planowane)
 
 ---
 
 ## 📌 Zarządzanie zadaniami
 
-- Użytkownik wpisuje opis zadania (problem, plan, cel)
-- GPT-4o (via `function calling`) generuje strukturę zadania:
+- Użytkownik wpisuje `description`, reszta może być wygenerowana
+- AI uzupełnia: `title`, `difficulty`, `dueDate` (jeśli wynika z treści)
+- Zadanie zapisywane do MongoDB
+- Generowany jest `embedding` i przypisywane `similarTasks`
+- Zadanie można edytować częściowo (`PATCH`)
+
+Przykład wygenerowanego zadania:
 
 ```json
 {
@@ -33,67 +42,66 @@ Pomoc osobom wykonującym złożone zadania (np. programistom, naukowcom, admini
 }
 ```
 
-- Zadanie zapisywane jest do MongoDB
-- System generuje `embedding` i przypisuje podobne zadania (`similarTasks`)
-- Użytkownik może edytować dane zadania
-
 ---
 
 ## ✅ Zamykanie zadań
 
-- Użytkownik zamyka zadanie przez endpoint `/api/tasks/:id/ai-close`
-- Możliwości:
-  - Podaje własne `summary` → AI ocenia i wygładza
-  - Opis zbyt krótki → może wymusić (`force: true`) → AI wygładza
-  - Wskazuje `sourceTaskId` → kopiujemy `summary` z innego zadania (bez AI)
-  - Brak `summary` i `sourceTaskId` → system odrzuca (wymagana decyzja użytkownika)
+- `PATCH /api/tasks/:id/ai-close` – AI ocenia i wygładza `summary`
+  - jeśli za krótkie → AI odrzuca, użytkownik może wymusić (`force: true`)
+  - `summary` musi mieć sens i zawierać informacje techniczne
+- `PATCH /api/tasks/:id/close` – kopiowanie `summary` z innego zadania (`sourceTaskId`)
+  - bez AI
+  - `summary` nie może być przesyłane ręcznie
 
 ---
 
 ## 🔍 Porównywanie zadań
 
-- Generowanie embeddingu (`text-embedding-3-small`) na podstawie `title + description`
-- Porównanie z embeddingami zamkniętych zadań (cosine similarity)
-- Tylko zadania z similarity >= 0.75 trafiają do `similarTasks`
-- Maksymalnie 5 wyników
-- Podobne zadania mogą być wykorzystane tylko ręcznie przez użytkownika (nie automatycznie przez AI)
+- Generowanie embeddingu (`text-embedding-3-small`) z `title + description`
+- Cosine similarity z zamkniętymi zadaniami
+- Przypisywane max 5 zadań o podobieństwie ≥ 0.75
+- Użytkownik sam decyduje, które podobne zadania były pomocne
+- AI nie korzysta automatycznie z `similarTasks`
 
 ---
 
 ## 💬 Inteligentne wsparcie AI (planowane)
 
-GPT będzie wspierać użytkownika także poprzez:
-
-- „Jakie mam obecnie otwarte zadania?”
-- „Co jest najłatwiejsze do zrobienia?”
-- Generowanie listy zadań wg trudności (`difficulty`)
-- Sugestie priorytetów, grupowania zadań
+- Odpowiedzi na pytania:
+  - „Jakie mam obecnie otwarte zadania?”
+  - „Co powinienem zrobić najpierw?”
+  - „Które zadania są najtrudniejsze?”
+- Sugestie kolejności, grupowania, tygodniowego planowania
 
 ---
 
 ## 🤖 Integracja z OpenAI
 
-- Backend używa GPT-4o przez `openai` SDK (function calling)
-- Obsługiwane funkcje: `create_task`, `assess_summary`, `improve_summary`
-- AI **nigdy nie tworzy summary automatycznie** – użytkownik musi podać dane
-- Użytkownik podaje swój klucz OpenAI (lokalnie)
-- Klucz nie trafia do frontend – planowane szyfrowanie AES
-- Brak fallbacków – struktura zwracana zawsze jako JSON
+- GPT-4o z `function calling` (OpenAI SDK)
+- Obsługiwane funkcje:
+  - `create_task`
+  - `assess_summary`
+  - `improve_summary`
+- `summary` **nigdy nie jest generowane automatycznie**
+- AI działa tylko przy zamykaniu przez `/ai-close`
+- Klucz OpenAI przechowywany lokalnie (planowane szyfrowanie AES)
+- Wszystkie odpowiedzi mają format JSON (brak fallbacków)
 
 ---
 
-## 🧹 Czyszczenie historii AI
+## 🧹 Czyszczenie kontekstu
 
-- Kontekst GPT nie jest przechowywany – reset po zamknięciu zadania
-- Wszystkie odpowiedzi AI są jednorazowe i kontekstowe
+- Kontekst GPT nie jest utrzymywany między zadaniami
+- AI zawsze działa jednorazowo i w izolacji (stateless)
 
 ---
 
 ## 🧠 Dane i baza danych
 
-- MongoDB lokalnie + MongoDB Atlas (backup)
-- Użytkownicy mają osobne przestrzenie (`ownerId`)
-- Embedding i podobne zadania (`similarTasks`) w tym samym modelu danych
+- MongoDB lokalnie oraz w MongoDB Atlas (z backupem)
+- Użytkownik ma własną przestrzeń (`ownerId`)
+- Zadania zawierają:
+  - `summary`, `similarTasks`, `embedding`
 - Planowane: organizacje i współdzielona wiedza
 
 ---
@@ -102,11 +110,12 @@ GPT będzie wspierać użytkownika także poprzez:
 
 > Użytkownik wpisuje: "Nie działa API uczelni, chyba chodzi o tokeny"
 
-> GPT-4o tworzy zadanie "Naprawa API uczelni"
+> GPT-4o tworzy zadanie: "Naprawa API uczelni"
 
 > Backend wykrywa podobne zadanie z przeszłości: "Brak nagłówka Authorization"
 
-> Użytkownik wskazuje to zadanie jako `sourceTaskId`, a system kopiuje opis rozwiązania
+> Użytkownik wskazuje to zadanie jako `sourceTaskId`  
+> System kopiuje `summary` z tamtego zadania do nowego
 
 ---
 
@@ -114,10 +123,11 @@ GPT będzie wspierać użytkownika także poprzez:
 
 - **Frontend:** React + TailwindCSS (planowany)
 - **Backend:** Node.js + Express
-- **Baza danych:** MongoDB (lokalnie i w chmurze)
-- **Autoryzacja:** JWT, bcrypt
-- **AI:** GPT-4o + text-embedding-3-small (function calling)
-- **Inne:** dotenv, Mongoose, Prettier, AES (planowane)
+- **Baza danych:** MongoDB lokalnie i w chmurze
+- **Autoryzacja:** JWT + bcrypt
+- **AI:** OpenAI GPT-4o + `text-embedding-3-small`
+- **Walidacja:** express-validator
+- **Inne:** dotenv, AES (planowane), Prettier
 
 ---
 
@@ -128,15 +138,15 @@ GPT będzie wspierać użytkownika także poprzez:
 
 ---
 
-## 🧩 Struktura projektu (monorepo z submodułami)
+## 🧩 Struktura projektu
 
 ```
 ai-task-app/
-├── backend/     ← submoduł backendu
-├── frontend/    ← submoduł frontendu
-├── docs/        ← dokumentacja markdown
+├── backend/     ← podrepozytorium Express (API, AI)
+├── frontend/    ← (planowany interfejs React)
+├── docs/        ← dokumentacja Markdown
 ├── .gitmodules
-├── README.md
+└── README.md
 ```
 
 ### ✅ Klonowanie z submodułami
