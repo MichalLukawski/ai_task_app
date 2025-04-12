@@ -2,7 +2,7 @@
 
 ## 📁 Plik: `services/gptService.function.js`
 
-Plik zawiera funkcję odpowiedzialną za generowanie struktury zadania z wykorzystaniem mechanizmu **function calling** w modelu `gpt-4o` (OpenAI API).
+Plik zawiera funkcje odpowiedzialne za obsługę GPT-4o z użyciem **function calling**: tworzenie zadań, ocenę i wygładzanie podsumowań.
 
 ---
 
@@ -11,53 +11,81 @@ Plik zawiera funkcję odpowiedzialną za generowanie struktury zadania z wykorzy
 ### `getTaskStructureFromAI(description)`
 
 - **Typ:** `async function`
+- **Parametry:** `description` _(string)_ – opis zadania od użytkownika
+- **Zwraca:** `Promise<object>` – `{ title, description, dueDate?, difficulty? }`
+- **Mechanizm:** function calling (`create_task`)
+
+---
+
+### `getSummaryAssessment(taskDescription, userSummary)`
+
+- **Typ:** `async function`
 - **Parametry:**
-  - `description` _(string)_ – opis zadania podany przez użytkownika
-- **Zwraca:** `Promise<object>` – struktura zadania `{ title, description, dueDate?, difficulty? }`
-- **Model:** `gpt-4o`
-- **Mechanizm:** `function_call` z `tools` (OpenAI)
+  - `taskDescription` _(string)_ – oryginalny opis zadania
+  - `userSummary` _(string)_ – wpisane przez użytkownika podsumowanie
+- **Zwraca:** `"error"` lub poprawiony tekst (string)
+- **Mechanizm:** function calling (`assess_summary`)
+- **Cel:** Ocena, czy `summary` jest wystarczająco dobre do użycia
+
+---
+
+### `improveSummary(userSummary)`
+
+- **Typ:** `async function`
+- **Parametry:** `userSummary` _(string)_ – opis użytkownika
+- **Zwraca:** `Promise<string>` – wygładzona wersja
+- **Mechanizm:** function calling (`improve_summary`)
+- **Cel:** Poprawa stylu i języka opisu, bez zmiany sensu
 
 ---
 
 ## ⚙️ Jak działa
 
-1. Tworzy wiadomości `system` i `user` z aktualną datą i opisem zadania
-2. Określa `tools.function` (nazwa: `create_task`) z polami:
-   - `title` (string, required)
-   - `description` (string, required)
-   - `dueDate` (string, opcjonalnie, format ISO)
-   - `notes` (opcjonalnie, jeśli GPT uzna to za potrzebne)
-   - `difficulty` (opcjonalnie, skala 1–5)
-3. Wywołuje model `gpt-4o` z parametrem `tool_choice`
-4. Parsuje `tool_calls[0].function.arguments` jako JSON
+Wszystkie funkcje korzystają z `tools` oraz `tool_choice`, zgodnie z zasadami OpenAI Function Calling.
+
+- `getTaskStructureFromAI`: tool `create_task`
+- `getSummaryAssessment`: tool `assess_summary`
+- `improveSummary`: tool `improve_summary`
+
+Każda z funkcji odbiera dane w postaci JSON, parsuje `tool_calls[0].function.arguments` i zwraca wynik strukturalnie.
 
 ---
 
 ## ✅ Uwagi
 
-- Brak fallbacku tekstowego – wymuszony jest poprawny JSON przez OpenAI function calling
-- `notes` może być zwrócone, ale nie jest już zapisywane domyślnie
-- `difficulty` jest opcjonalne, ale AI powinno je uzupełnić w większości przypadków
-- Funkcja nie zapisuje do Mongo – tylko zwraca strukturę do kontrolera
+- Wszystkie odpowiedzi GPT są **parsowane jako JSON** – brak tekstu luzem
+- AI nigdy nie tworzy podsumowań samodzielnie – tylko ocenia lub wygładza
+- Jeśli AI zwraca `"error"`, użytkownik może wymusić użycie tekstu (`force: true`)
 
 ---
 
 ## 📥 Przykład użycia w kontrolerze
 
 ```js
-const { getTaskStructureFromAI } = require("../services/gptService.function");
+const {
+  getSummaryAssessment,
+  improveSummary,
+} = require("../services/gptService.function");
+const { processTaskClosure } = require("../services/aiSummaryService");
 
-exports.createWithAI = async (req, res) => {
-  const structure = await getTaskStructureFromAI(req.body.description);
-  const task = new Task({ ...structure, ownerId: req.user.id });
+exports.aiCloseTask = async (req, res) => {
+  const summary = await processTaskClosure({
+    task,
+    userSummary: req.body.summary,
+    sourceTaskId: req.body.sourceTaskId,
+    force: req.body.force,
+  });
+  task.summary = summary;
+  task.status = "closed";
+  task.closedAt = new Date();
   await task.save();
 };
 ```
 
 ---
 
-## 🔐 Bezpieczeństwo i jakość danych
+## 📄 Powiązania
 
-- Aktualna data pomaga w kontekście "do 15 maja"
-- Zwięzły prompt systemowy oszczędza tokeny
-- Function calling zapewnia pełną kontrolę nad strukturą danych
+- `taskController.js`
+- `aiSummaryService.js`
+- `embeddingService.js`

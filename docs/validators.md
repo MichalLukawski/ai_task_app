@@ -3,7 +3,8 @@
 ## 📄 Plik: `validators/taskValidator.js`
 
 ### Opis:
-Walidatory dla tworzenia i edycji zadań. Oparte o `express-validator`.
+
+Walidatory dla tworzenia i edycji zadań oraz zamykania zadania (AI). Oparte o `express-validator`.
 
 ---
 
@@ -18,20 +19,51 @@ Walidatory dla tworzenia i edycji zadań. Oparte o `express-validator`.
 exports.validateTaskInput = [
   body("description")
     .trim()
-    .notEmpty().withMessage("Description is required")
-    .isLength({ min: 5 }).withMessage("Description must be at least 5 characters long"),
+    .notEmpty()
+    .withMessage("Description is required")
+    .isLength({ min: 5 })
+    .withMessage("Description must be at least 5 characters long"),
 
   body("title")
     .optional()
-    .isLength({ min: 3, max: 100 }).withMessage("Title must be between 3 and 100 characters"),
+    .isLength({ min: 3, max: 100 })
+    .withMessage("Title must be between 3 and 100 characters"),
 
   body("status")
     .optional()
-    .isIn(["open", "closed"]).withMessage("Status must be either 'open' or 'closed'"),
+    .isIn(["open", "closed"])
+    .withMessage("Status must be either 'open' or 'closed'"),
 
   body("dueDate")
     .optional()
-    .isISO8601().withMessage("Due date must be a valid ISO 8601 date (e.g., YYYY-MM-DD)")
+    .isISO8601()
+    .withMessage("Due date must be a valid ISO 8601 date (e.g., YYYY-MM-DD)"),
+];
+```
+
+---
+
+### `validateCloseTaskInput`
+
+Walidator dla `POST /api/tasks/:id/ai-close`
+
+- **summary** – opcjonalne, string
+- **force** – opcjonalne, boolean
+- **sourceTaskId** – opcjonalne, `ObjectId`
+
+```js
+exports.validateCloseTaskInput = [
+  body("summary").optional().isString().withMessage("Summary must be a string"),
+
+  body("force")
+    .optional()
+    .isBoolean()
+    .withMessage("Force must be a boolean value"),
+
+  body("sourceTaskId")
+    .optional()
+    .isMongoId()
+    .withMessage("sourceTaskId must be a valid MongoDB ObjectId"),
 ];
 ```
 
@@ -39,13 +71,7 @@ exports.validateTaskInput = [
 
 ### Powiązania:
 
-- Używane w trasach `POST` i `PUT /api/tasks/:id`
-- Współpracuje z middleware `validate.js`
+- `validateTaskInput`: trasy `POST /api/tasks`, `PUT /api/tasks/:id`
+- `validateCloseTaskInput`: trasa `POST /api/tasks/:id/ai-close`
+- Współpraca z middleware `validate.js`
 - Zgodność z modelem `Task.js`
-
----
-
-### Planowane rozszerzenia:
-
-- Możliwość walidacji nowego pola `difficulty` (jeśli zostanie dodane przez AI)
-- Możliwe wymuszenie doprecyzowania `description` w przyszłości (np. do minimum semantycznego)

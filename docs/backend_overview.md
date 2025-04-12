@@ -22,7 +22,7 @@ backend/
 ├── models/             # Schematy danych: User, Task
 ├── routes/             # Endpointy API: authRoutes, taskRoutes
 ├── middleware/         # Obsługa JWT (auth.js), walidacja (validate.js)
-├── services/           # Integracja AI: gptService.function.js, embeddingService.js
+├── services/           # Integracja AI: gptService.function.js, aiSummaryService.js, embeddingService.js
 ├── utils/              # Funkcje pomocnicze: responseHandler
 ├── validators/         # Walidacja pól (express-validator)
 ├── prettier.config.js  # Konfiguracja formatowania kodu
@@ -34,26 +34,25 @@ backend/
 
 ## 📦 Endpointy (zrealizowane)
 
-| Metoda | Endpoint             | Opis                                              |
-| ------ | -------------------- | ------------------------------------------------- |
-| POST   | /api/auth/register   | Rejestracja użytkownika                           |
-| POST   | /api/auth/login      | Logowanie i zwrot tokena JWT                      |
-| POST   | /api/tasks           | Tworzenie zadania ręcznie                         |
-| GET    | /api/tasks           | Lista zadań użytkownika                           |
-| PUT    | /api/tasks/:id       | Edycja zadania                                    |
-| POST   | /api/tasks/:id/close | Zamykanie zadania (status + closedAt)             |
-| POST   | /api/tasks/ai-create | Tworzenie zadania z pomocą GPT-4o (function call) |
+| Metoda | Endpoint                | Opis                                                         |
+| ------ | ----------------------- | ------------------------------------------------------------ |
+| POST   | /api/auth/register      | Rejestracja użytkownika                                      |
+| POST   | /api/auth/login         | Logowanie i zwrot tokena JWT                                 |
+| POST   | /api/tasks              | Tworzenie zadania ręcznie                                    |
+| GET    | /api/tasks              | Lista zadań użytkownika                                      |
+| PUT    | /api/tasks/:id          | Edycja zadania                                               |
+| POST   | /api/tasks/ai-create    | Tworzenie zadania z pomocą GPT-4o (function call)            |
+| POST   | /api/tasks/:id/ai-close | Zamykanie zadania (AI: ocena summary, force, lub kopiowanie) |
 
 ---
 
 ## 🧠 Integracja AI – GPT-4o + embeddings
 
-- `gptService.function.js` wykorzystuje function calling (OpenAI tools)
-- Struktura zadania: `title`, `description`, `dueDate`, `difficulty`
-- Obsługuje tylko poprawne odpowiedzi – brak potrzeby fallbacku
-- `embeddingService.js` generuje embedding (model: `text-embedding-3-small`)
-- Embedding porównywany z zamkniętymi zadaniami (`cosine similarity`)
+- `gptService.function.js` wykorzystuje function calling (`create_task`, `assess_summary`, `improve_summary`)
+- `aiSummaryService.js` obsługuje scenariusze zamykania zadania (opis własny, force, kopiowanie)
+- `embeddingService.js` generuje embedding (`text-embedding-3-small`), porównuje z zakończonymi zadaniami
 - Top 5 podobnych (`similarity >= 0.75`) przypisywane do `similarTasks`
+- AI nigdy nie generuje `summary` automatycznie — użytkownik musi podać dane
 
 ---
 

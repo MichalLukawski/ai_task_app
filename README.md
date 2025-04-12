@@ -41,9 +41,12 @@ Pomoc osobom wykonującym złożone zadania (np. programistom, naukowcom, admini
 
 ## ✅ Zamykanie zadań
 
-- Użytkownik oznacza zadanie jako wykonane
-- Planowane: AI (GPT) wygeneruje podsumowanie działania (`summary`)
-- Możliwość edycji podsumowania przed zapisaniem
+- Użytkownik zamyka zadanie przez endpoint `/api/tasks/:id/ai-close`
+- Możliwości:
+  - Podaje własne `summary` → AI ocenia i wygładza
+  - Opis zbyt krótki → może wymusić (`force: true`) → AI wygładza
+  - Wskazuje `sourceTaskId` → kopiujemy `summary` z innego zadania (bez AI)
+  - Brak `summary` i `sourceTaskId` → system odrzuca (wymagana decyzja użytkownika)
 
 ---
 
@@ -53,6 +56,7 @@ Pomoc osobom wykonującym złożone zadania (np. programistom, naukowcom, admini
 - Porównanie z embeddingami zamkniętych zadań (cosine similarity)
 - Tylko zadania z similarity >= 0.75 trafiają do `similarTasks`
 - Maksymalnie 5 wyników
+- Podobne zadania mogą być wykorzystane tylko ręcznie przez użytkownika (nie automatycznie przez AI)
 
 ---
 
@@ -70,6 +74,8 @@ GPT będzie wspierać użytkownika także poprzez:
 ## 🤖 Integracja z OpenAI
 
 - Backend używa GPT-4o przez `openai` SDK (function calling)
+- Obsługiwane funkcje: `create_task`, `assess_summary`, `improve_summary`
+- AI **nigdy nie tworzy summary automatycznie** – użytkownik musi podać dane
 - Użytkownik podaje swój klucz OpenAI (lokalnie)
 - Klucz nie trafia do frontend – planowane szyfrowanie AES
 - Brak fallbacków – struktura zwracana zawsze jako JSON
@@ -100,6 +106,8 @@ GPT będzie wspierać użytkownika także poprzez:
 
 > Backend wykrywa podobne zadanie z przeszłości: "Brak nagłówka Authorization"
 
+> Użytkownik wskazuje to zadanie jako `sourceTaskId`, a system kopiuje opis rozwiązania
+
 ---
 
 ## 🧰 Technologie
@@ -108,7 +116,7 @@ GPT będzie wspierać użytkownika także poprzez:
 - **Backend:** Node.js + Express
 - **Baza danych:** MongoDB (lokalnie i w chmurze)
 - **Autoryzacja:** JWT, bcrypt
-- **AI:** GPT-4o + text-embedding-3-small
+- **AI:** GPT-4o + text-embedding-3-small (function calling)
 - **Inne:** dotenv, Mongoose, Prettier, AES (planowane)
 
 ---

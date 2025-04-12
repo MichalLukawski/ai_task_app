@@ -3,9 +3,11 @@
 ## 📘 API: Authentication
 
 ### POST /api/auth/register
+
 Rejestracja nowego użytkownika.
 
 **Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -14,6 +16,7 @@ Rejestracja nowego użytkownika.
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -24,9 +27,11 @@ Rejestracja nowego użytkownika.
 ---
 
 ### POST /api/auth/login
+
 Logowanie użytkownika.
 
 **Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -35,6 +40,7 @@ Logowanie użytkownika.
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -50,10 +56,12 @@ Logowanie użytkownika.
 ## 📘 API: Tasks
 
 ### POST /api/tasks
+
 Tworzenie nowego zadania (manualnie).
 
 **Headers:** Authorization: Bearer <JWT>  
 **Body:**
+
 ```json
 {
   "description": "Nie działa API uczelni",
@@ -63,6 +71,7 @@ Tworzenie nowego zadania (manualnie).
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -81,17 +90,20 @@ Tworzenie nowego zadania (manualnie).
 ---
 
 ### POST /api/tasks/ai-create
-Tworzenie zadania z pomocą GPT-4o (automatyczne).
+
+Tworzenie zadania z pomocą GPT-4o (function calling).
 
 **Headers:** Authorization: Bearer <JWT>  
 **Body:**
+
 ```json
 {
-  "description": "Nie działa API uczelni, chyba brakuje nagłówka Authorization"
+  "description": "Nie działa API uczelni, prawdopodobnie brak nagłówka Authorization. Mam czas do 15 kwietnia"
 }
 ```
 
-**Response (typowy przypadek):**
+**Response:**
+
 ```json
 {
   "status": "success",
@@ -100,8 +112,10 @@ Tworzenie zadania z pomocą GPT-4o (automatyczne).
     "_id": "...",
     "description": "...",
     "title": "...",
-    "notes": "...",
     "dueDate": "2025-04-15",
+    "difficulty": 3,
+    "similarTasks": [...],
+    "embedding": [...],
     "status": "open",
     "createdAt": "...",
     "ownerId": "..."
@@ -109,16 +123,42 @@ Tworzenie zadania z pomocą GPT-4o (automatyczne).
 }
 ```
 
-**Uwaga:**
-- odpowiedź generowana przez GPT musi być poprawnym JSON-em
-- jeśli nie jest – system automatycznie zapisuje `notes` z oryginalnej odpowiedzi (fallback)
-- odpowiedzi fallbackowe są logowane do `logs/gpt_fallbacks.log`
+---
+
+### POST /api/tasks/:id/ai-close
+
+Zamykanie zadania z pomocą AI lub kopiowania podsumowania z innego zadania.
+
+**Headers:** Authorization: Bearer <JWT>  
+**Body (przykładowy):**
+
+```json
+{
+  "summary": "Zmieniono konfigurację webhooka GitHub i przetestowano działanie.",
+  "force": false,
+  "sourceTaskId": null
+}
+```
+
+**Możliwe scenariusze:**
+
+- `summary` >= 40 znaków oraz tekst, który pozwala na stworzenie użytecznego opisu → AI wygładza i zapisuje
+- `summary` < 40 znaków → wymagane `force: true`
+- `sourceTaskId` → kopiujemy `summary` z innego zadania (bez AI)
+- brak `summary` i `sourceTaskId` → błąd
+
+**Responses:**
+
+- 200 OK – zadanie zamknięte, `summary` zapisane
+- 400 – opis zbyt krótki bez `force`
+- 400 – brak danych do zamknięcia (`summary` lub `sourceTaskId`)
 
 ---
 
 ## 📘 API: System
 
 ### GET /api/health
+
 Sprawdzenie działania backendu.
 
 ---
@@ -126,4 +166,3 @@ Sprawdzenie działania backendu.
 ## 📌 Planowane rozszerzenia API
 
 - `POST /api/ai/similar-tasks` – zwraca podobne zadania na podstawie embeddingów
-- Ocena trudności zadania (`difficulty`) jako część odpowiedzi GPT (w przyszłości)

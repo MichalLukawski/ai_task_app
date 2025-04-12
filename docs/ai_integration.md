@@ -17,18 +17,11 @@ GPT pełni rolę inteligentnego asystenta, który rozumie intencję użytkownika
 
 ## 🔗 Komunikacja z API OpenAI – Function Calling
 
-System korzysta z mechanizmu `function_calling` w GPT-4o do wygenerowania pełnej struktury zadania.
+System korzysta z mechanizmu `function_calling` w GPT-4o do:
 
-Przykład zapytania:
-
-```js
-const response = await openai.chat.completions.create({
-  model: "gpt-4o",
-  messages: [...],
-  tools: [{ type: "function", function: { name: "create_task", parameters: {...} } }],
-  tool_choice: { type: "function", function: { name: "create_task" } }
-});
-```
+- generowania struktury nowego zadania (`create_task`),
+- oceny jakości podsumowania (`assess_summary`),
+- wygładzenia podsumowania na życzenie użytkownika (`improve_summary`).
 
 ---
 
@@ -38,16 +31,19 @@ const response = await openai.chat.completions.create({
 
 1. **Tworzenie zadania**
 
-   - Generowane pola: `title`, `description`, `dueDate` (opcjonalnie), `difficulty` (opcjonalnie)
-   - Funkcja `getTaskStructureFromAI(description)` zwraca strukturę danych z GPT
+   - Generowane pola: `title`, `description`, `dueDate?`, `difficulty?`
+   - Funkcja: `getTaskStructureFromAI(description)`
 
 2. **Ocena trudności (`difficulty`)**
 
    - GPT ocenia trudność na podstawie opisu użytkownika (skala 1–5)
 
-3. **Podsumowanie wykonania (planowane)**
+3. **Zamykanie zadania (AI jako wsparcie)**
 
-   - GPT wygeneruje `summary` przy zamykaniu zadania (`/tasks/:id/close`)
+   - AI ocenia jakość podsumowania użytkownika (`getSummaryAssessment`)
+   - Jeśli opis jest zbyt słaby – użytkownik może go świadomie wymusić
+   - W takim przypadku AI tylko wygładza tekst (`improveSummary`)
+   - Jeśli użytkownik nie poda `summary`, może wskazać `sourceTaskId` – kopiujemy opis z innego zadania (bez udziału AI)
 
 4. **Semantyczne porównywanie zadań**
 
@@ -55,18 +51,29 @@ const response = await openai.chat.completions.create({
    - Porównywanie z embeddingami zadań `status: closed`
    - Top 5 z `similarity >= 0.75` przypisywane do `similarTasks`
 
-5. **Tworzenie tasków tylko z pomocą GPT – opcja `ai-create`**
-   - Zadanie trafia do Mongo
-   - Następnie backend generuje `embedding` i przypisuje `similarTasks` (opcja C – hybrydowa)
+5. **Tworzenie zadań przez AI**
+   - Endpoint: `POST /api/tasks/ai-create`
+   - Po zapisaniu: automatyczna analiza embedding i przypisanie `similarTasks`
 
 ---
 
 ## ⚙️ Obsługa backendowa
 
-- Plik: `services/gptService.function.js`
-  - Wykorzystuje `function calling`, bez fallbacków
-  - Wymusza strukturę danych zgodną ze schematem
-- Plik: `services/embeddingService.js`
+- `gptService.function.js`:
+
+  - `getTaskStructureFromAI(description)` – function calling `create_task`
+  - `getSummaryAssessment(description, userInput)` – function calling `assess_summary`
+  - `improveSummary(userInput)` – function calling `improve_summary`
+
+- `aiSummaryService.js`
+
+  - Obsługuje wszystkie ścieżki logiczne dla zamykania zadania:
+    - własny opis,
+    - wymuszenie krótkiego opisu,
+    - kopiowanie `summary` z innego zadania,
+    - brak danych → błąd
+
+- `services/embeddingService.js`
   - Generuje embeddingi
   - Porównuje z zadaniami z bazy
   - Aktualizuje `embedding`, `similarTasks` nowego zadania
@@ -84,10 +91,9 @@ const response = await openai.chat.completions.create({
 ## 📌 Planowane rozszerzenia
 
 - Uczenie się na podstawie zadań podobnych (zatwierdzanych ręcznie)
-- Zamknięcie zadania z pomocą AI na podstawie `similarTasks`
-- Ręczne szukanie podobnych zadań (`POST /api/ai/similar-tasks`)
 - Sugestie AI (otwarte zadania, najłatwiejsze, najpilniejsze)
 - Eksperckie profile AI (tryb techniczny, menedżerski, itd.)
+- Endpoint `POST /api/ai/similar-tasks` – wyszukiwanie podobnych przypadków
 
 ---
 

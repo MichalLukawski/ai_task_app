@@ -37,7 +37,7 @@
 
 ```json
 {
-  "description": "Nie działa API uczelni, prawdopodobnie brak Authorization"
+  "description": "Nie działa API uczelni, prawdopodobnie brak Authorization. Mam czas do 20 maja 2025"
 }
 ```
 
@@ -56,6 +56,33 @@
 
 ---
 
+### POST /api/tasks/:id/ai-close
+
+Zamyka zadanie z pomocą AI lub kopiowania istniejącego podsumowania.
+
+- Jeśli `summary` jest dostarczone, ma ≥ 40 znaków oraz pozwala na stworzenie watościowego opisu, GPT wygładza i zapisuje
+- Jeśli `summary` jest zbyt krótkie, system wymaga `force: true` i tylko wygładza
+- Jeśli użytkownik wskaże `sourceTaskId`, kopiujemy `summary` z tego zadania
+- Jeśli `summary` i `sourceTaskId` są puste – zwracany jest błąd
+
+**Body:**
+
+```json
+{
+  "summary": "Zmieniono token w webhooku i przetestowano działanie.",
+  "force": false,
+  "sourceTaskId": null
+}
+```
+
+**Odpowiedzi:**
+
+- 200 OK: zadanie zamknięte, `summary` zapisane
+- 400: brak podsumowania i brak `sourceTaskId`
+- 400: opis za krótki i brak `force`
+
+---
+
 ### GET /api/tasks
 
 - Zwraca wszystkie zadania zalogowanego użytkownika (`ownerId`)
@@ -65,13 +92,6 @@
 ### PUT /api/tasks/:id
 
 - Aktualizuje istniejące zadanie (tytuł, opis, termin, status)
-
----
-
-### POST /api/tasks/:id/close
-
-- Zamyka zadanie (`status = closed`, `closedAt = now()`)
-- Planowane: AI generuje `summary` z wykorzystaniem podobnych zadań (`similarTasks`)
 
 ---
 

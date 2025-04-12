@@ -17,7 +17,7 @@
 - [x] Model `Task.js` z polami: opis, status, daty, notatki AI
 - [x] Dodanie pola `dueDate` (termin wykonania) + obsługa
 - [x] Endpoint `POST /api/tasks` – tworzenie zadania
-- [x] Endpoint `POST /api/tasks/:id/close` – zamknięcie z AI
+- [x] Endpoint `POST /api/tasks/:id/ai-close` – zamykanie z pomocą AI / kopiowania
 - [x] Endpoint `GET /api/tasks` – lista zadań użytkownika
 - [x] Endpoint `PUT /api/tasks/:id` – edycja
 - [x] Autoryzacja i filtracja po `ownerId`
@@ -26,44 +26,29 @@
 
 ---
 
-## 🤖 Etap 2: Integracja GPT (**W TRAKCIE**)
+## 🤖 Etap 2: Integracja GPT (**ZREALIZOWANE**)
 
 - [x] Połączenie z OpenAI API (model GPT-4o)
 - [x] Endpoint `POST /api/tasks/ai-create` – generowanie zadania
-- [x] Moduł `gptService.js` – nowa wersja: odpowiedź w JSON
-- [x] Uwzględnienie bieżącej daty w promcie
-- [x] Parsowanie odpowiedzi GPT (`JSON.parse`)
-- [x] Fallback: jeśli odpowiedź nieparsowalna → zapis do `notes`
-- [x] Logowanie błędnych odpowiedzi do `logs/gpt_fallbacks.log`
-- [ ] Generowanie podsumowania przy zamykaniu zadania
+- [x] Mechanizm function calling (`create_task`, `assess_summary`, `improve_summary`)
+- [x] Obsługa `difficulty`
+- [x] Weryfikacja jakości podsumowania (`getSummaryAssessment`)
+- [x] Wygładzanie słabych podsumowań (`improveSummary`)
+- [x] Możliwość świadomego wymuszenia opisu przez użytkownika (`force`)
+- [x] Możliwość użycia `sourceTaskId` – kopiowanie podsumowania
+- [x] Brak automatycznego generowania `summary` przez AI z podobnych zadań
 - [ ] Przechowywanie i szyfrowanie klucza API
-- [ ] Ocena trudności zadania przez GPT (`difficulty`: 1–5) – **PLANOWANE**
 
 ---
 
-## 🧠 Etap 3: Semantyczna historia (**PLANOWANE / ROZPISANE**)
+## 🧠 Etap 3: Semantyczna historia (**PLANOWANE**)
 
-- [ ] Tworzenie embeddingów z opisów zadań (model: `text-embedding-3-small`)
-- [ ] Porównanie nowego zadania z historią przez cosine similarity
-- [ ] Dopiero top 3 przypadki analizowane przez GPT-4o (opcjonalnie)
-- [ ] Endpoint `POST /api/ai/similar-tasks`
-- [ ] Wizualizacja podobieństw / linki do historii
-- [ ] Endpoint `POST /api/ai/search-similar` – umożliwia użytkownikowi wpisanie dowolnego opisu sytuacji i odnalezienie podobnych zadań z przeszłości
-- [ ] Generowanie embeddingu na podstawie opisu zapytania użytkownika
-- [ ] Porównanie z embeddingami zadań zakończonych (`status: closed`) i zwrot, np. top 3 trafień
-- [ ] Brak zapisu nowego zadania – czysto pomocnicze użycie AI
-- [ ] (Opcjonalnie) Dodatkowa analiza top wyników przez GPT w celu zwiększenia trafności
-
-### 🔁 Podobieństwo zadań i zamykanie z pomocą AI (dodane 2025-04-11)
-
-- [ ] Przy tworzeniu zadania backend generuje embedding (`text-embedding-3-small`) z opisu
-- [ ] Porównanie embeddingu z embeddingami zamkniętych zadań (`status: closed`)
-- [ ] Zwracane są maksymalnie 5 zadań, które mają `similarity >= 0.75`; jeśli więcej → top 5 z najwyższym similarity
-- [ ] Użytkownik samodzielnie przegląda propozycje i potwierdza, które zadania rzeczywiście były pomocne
-- [ ] Tylko potwierdzone zadania trafiają do `similarTasks` nowo utworzonego zadania
-- [ ] Podczas zamykania zadania użytkownik może wskazać, że rozwiązania z podobnych zadań były pomocne
-- [ ] Wtedy AI generuje `summary` na podstawie treści wskazanych `similarTasks`
-- [ ] Możliwe zamknięcie komendą: „zamknij to zadanie, rozwiązania z zadań podobnych okazały się poprawne” – AI odczytuje `summary` z podobnych zadań i tworzy nowe podsumowanie
+- [x] Tworzenie embeddingów z opisów zadań (`text-embedding-3-small`)
+- [x] Porównanie nowego zadania z historią przez cosine similarity
+- [x] Top 5 zadań (`similarity >= 0.75`) zapisywane jako `similarTasks`
+- [ ] Endpoint `POST /api/ai/similar-tasks` – ręczne wyszukiwanie podobnych
+- [ ] Użytkownik potwierdza podobieństwo → trafiają do `similarTasks`
+- [ ] Wizualizacja podobieństw i ich użyteczności
 
 ---
 
@@ -73,8 +58,8 @@
 - [ ] Formularz logowania i rejestracji
 - [ ] Dashboard z listą zadań
 - [ ] Formularz tworzenia zadania
-- [ ] Podgląd szczegółów i zamykanie
-- [ ] Widok wyników porównań AI
+- [ ] Widok szczegółów i zamykanie zadań (`ai-close`)
+- [ ] Wybór `sourceTaskId`, komunikaty AI, przycisk „Force”
 
 ---
 
@@ -92,9 +77,11 @@
 
 ## 🔚 Podsumowanie
 
-Etap 2 został znacznie rozszerzony w wersji `0.0.7` (2025-04-10):
+Etap 2 (GPT) oraz logika zamykania zadań zostały ukończone w pełni. System obsługuje:
 
-- Zmieniono sposób integracji GPT: zwracany jest JSON, nie markdown
-- Dodano mechanizm fallbacku i logowania błędnych odpowiedzi AI
-- Zdefiniowano plan wdrożenia embeddingów i porównań semantycznych
-- Zaplanowano ocenę trudności (`difficulty`) przy użyciu GPT
+- ocenę jakości `summary`
+- wygładzanie stylu
+- świadome wymuszenie użycia opisu
+- kopiowanie z innego zadania
+
+Brak automatycznego tworzenia `summary` na podstawie `similarTasks` – użytkownik zawsze musi zadecydować.
