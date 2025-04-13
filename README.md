@@ -1,164 +1,93 @@
-# AI Task App
+# 📦 AI Task App – Monorepo (Frontend + Backend)
 
-AI Task App to webowa aplikacja wspierana przez GPT-4o, która pełni funkcję osobistego asystenta technicznego do zarządzania zadaniami. Aplikacja działa lokalnie (z możliwością wdrożenia w chmurze) i zapisuje dane w MongoDB. System umożliwia tworzenie zadań z pomocą AI, przypisywanie podobnych przypadków oraz inteligentne zamykanie zadań na podstawie oceny podsumowania.
-
----
-
-## 🎯 Cel systemu
-
-Pomoc osobom realizującym złożone, techniczne zadania – takim jak programiści, administratorzy, analitycy czy naukowcy – w dokumentowaniu pracy, analizowaniu podobnych przypadków i odzyskiwaniu wiedzy w oparciu o historię rozwiązań. System działa jako:
-
-- osobisty asystent AI (GPT-4o)
-- baza wiedzy eksperckiej (embeddingi)
-- narzędzie produktywności (planowanie, przypomnienia)
+AI Task App to inteligentna aplikacja do zarządzania zadaniami technicznymi, wspierana przez modele GPT-4o i OpenAI Embedding API. Projekt składa się z dwóch głównych części: backendu (Node.js + MongoDB) oraz frontendu (React + Vite + TailwindCSS).
 
 ---
 
-## 🔐 System kont i logowania
-
-- Rejestracja wyłącznie przez link od administratora
-- Weryfikacja e-mail
-- JWT jako token autoryzacyjny
-- Role: `user`, `admin` (rozszerzenia planowane)
-
----
-
-## 📌 Zarządzanie zadaniami
-
-- Użytkownik wpisuje `description`, reszta może być wygenerowana
-- AI uzupełnia: `title`, `difficulty`, `dueDate` (jeśli wynika z treści)
-- Zadanie zapisywane do MongoDB
-- Generowany jest `embedding` i przypisywane `similarTasks`
-- Zadanie można edytować częściowo (`PATCH`)
-
-Przykład wygenerowanego zadania:
-
-```json
-{
-  "title": "Skrypt do backupu",
-  "description": "Zadanie polega na utworzeniu skryptu do wykonywania backupów...",
-  "dueDate": "2025-05-01",
-  "difficulty": 3
-}
-```
-
----
-
-## ✅ Zamykanie zadań
-
-- `PATCH /api/tasks/:id/ai-close` – AI ocenia i wygładza `summary`
-  - jeśli za krótkie → AI odrzuca, użytkownik może wymusić (`force: true`)
-  - `summary` musi mieć sens i zawierać informacje techniczne
-- `PATCH /api/tasks/:id/close` – kopiowanie `summary` z innego zadania (`sourceTaskId`)
-  - bez AI
-  - `summary` nie może być przesyłane ręcznie
-
----
-
-## 🔍 Porównywanie zadań
-
-- Generowanie embeddingu (`text-embedding-3-small`) z `title + description`
-- Cosine similarity z zamkniętymi zadaniami
-- Przypisywane max 5 zadań o podobieństwie ≥ 0.75
-- Użytkownik sam decyduje, które podobne zadania były pomocne
-- AI nie korzysta automatycznie z `similarTasks`
-
----
-
-## 💬 Inteligentne wsparcie AI (planowane)
-
-- Odpowiedzi na pytania:
-  - „Jakie mam obecnie otwarte zadania?”
-  - „Co powinienem zrobić najpierw?”
-  - „Które zadania są najtrudniejsze?”
-- Sugestie kolejności, grupowania, tygodniowego planowania
-
----
-
-## 🤖 Integracja z OpenAI
-
-- GPT-4o z `function calling` (OpenAI SDK)
-- Obsługiwane funkcje:
-  - `create_task`
-  - `assess_summary`
-  - `improve_summary`
-- `summary` **nigdy nie jest generowane automatycznie**
-- AI działa tylko przy zamykaniu przez `/ai-close`
-- Klucz OpenAI przechowywany lokalnie (planowane szyfrowanie AES)
-- Wszystkie odpowiedzi mają format JSON (brak fallbacków)
-
----
-
-## 🧹 Czyszczenie kontekstu
-
-- Kontekst GPT nie jest utrzymywany między zadaniami
-- AI zawsze działa jednorazowo i w izolacji (stateless)
-
----
-
-## 🧠 Dane i baza danych
-
-- MongoDB lokalnie oraz w MongoDB Atlas (z backupem)
-- Użytkownik ma własną przestrzeń (`ownerId`)
-- Zadania zawierają:
-  - `summary`, `similarTasks`, `embedding`
-- Planowane: organizacje i współdzielona wiedza
-
----
-
-## 💡 Przykładowy scenariusz
-
-> Użytkownik wpisuje: "Nie działa API uczelni, chyba chodzi o tokeny"
-
-> GPT-4o tworzy zadanie: "Naprawa API uczelni"
-
-> Backend wykrywa podobne zadanie z przeszłości: "Brak nagłówka Authorization"
-
-> Użytkownik wskazuje to zadanie jako `sourceTaskId`  
-> System kopiuje `summary` z tamtego zadania do nowego
-
----
-
-## 🧰 Technologie
-
-- **Frontend:** React + TailwindCSS (planowany)
-- **Backend:** Node.js + Express
-- **Baza danych:** MongoDB lokalnie i w chmurze
-- **Autoryzacja:** JWT + bcrypt
-- **AI:** OpenAI GPT-4o + `text-embedding-3-small`
-- **Walidacja:** express-validator
-- **Inne:** dotenv, AES (planowane), Prettier
-
----
-
-## 📁 Repozytoria
-
-- [Backend (Node.js)](https://github.com/MichalLukawski/ai-task-app-backend)
-- [Frontend (React)](https://github.com/MichalLukawski/ai-task-app-frontend)
-
----
-
-## 🧩 Struktura projektu
+## 📁 Struktura katalogów
 
 ```
 ai-task-app/
-├── backend/     ← podrepozytorium Express (API, AI)
-├── frontend/    ← (planowany interfejs React)
-├── docs/        ← dokumentacja Markdown
-├── .gitmodules
-└── README.md
+├── backend/              # Serwer Express + AI + MongoDB
+├── frontend/             # UI React + Tailwind + AuthContext
+├── .env                  # (globalny .env dla dev servera)
+├── .gitmodules           # jeśli używane submoduły Git
+├── README.md             # (ten plik)
 ```
 
-### ✅ Klonowanie z submodułami
+---
+
+## ⚙️ Technologie
+
+- Backend: Node.js, Express, MongoDB, JWT, GPT-4o, AES-256
+- Frontend: React, TailwindCSS v4, Vite, JWT (localStorage)
+- Komunikacja: REST API (`/api/...`), autoryzacja tokenem
+- Styl: Prettier, modularny podział katalogów
+- Monorepo: wspólna konfiguracja `npm run dev`
+
+---
+
+## 🚀 Uruchomienie projektu (dev)
+
+1. Sklonuj repozytorium:
 
 ```bash
-git clone https://github.com/MichalLukawski/ai-task-app.git
-cd ai-task-app
-git submodule update --init --recursive
+git clone ...
 ```
 
-### 🔁 Aktualizacja submodułów
+2. Przejdź do katalogu i zainstaluj zależności:
 
 ```bash
-git submodule update --remote --merge
+npm install
 ```
+
+3. Uruchom jednocześnie frontend i backend:
+
+```bash
+npm run dev
+```
+
+> Wymaga `concurrently` – dodane do `devDependencies`
+
+---
+
+## 🧪 Środowiska `.env`
+
+- Backend: `backend/.env`
+- Frontend: `frontend/.env`
+
+Pełna dokumentacja:
+
+- [`env.md`](./docs/backend/env.md)
+- [`env_FULL.md`](./docs/frontend/env.md)
+
+---
+
+## 📄 Dokumentacja
+
+Dokumentacja projektu znajduje się w katalogu `docs/` (lub jako repozytorium Notion/Obsidian/Markdown).
+
+Główne pliki:
+
+- `frontend_README_FULL.md` – architektura frontendu
+- `backend_README_FULL.md` – architektura backendu
+- `api_spec.md` – endpointy REST API
+- `auth_flow_FULL.md` – pełen przepływ sesji/logowania
+- `services.md`, `controllers.md`, `middleware.md`
+- `vite_setup.md`, `ui_structure.md`, `src.md`
+
+---
+
+## 👨‍💻 Autorzy i współtwórcy
+
+- Projekt prowadzony jednoosobowo
+- Architektura dokumentowana jako część pracy inżynierskiej / rozwojowej
+
+---
+
+## 📌 Status
+
+- ✅ Backend w pełni funkcjonalny
+- ✅ Frontend: logowanie, rejestracja, sesja, widok użytkownika
+- 🧠 Integracja z AI działa (GPT-4o + embeddingi)
+- 🧱 Trwa porządkowanie dokumentacji + planowanie panelu admina

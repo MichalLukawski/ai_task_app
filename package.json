@@ -1,0 +1,19 @@
+{
+  "name": "ai_task_app",
+  "version": "0.0.11",
+  "description": "AI Task App to webowa aplikacja wspierana przez GPT-4o, która pełni funkcję osobistego asystenta technicznego do zarządzania zadaniami. Aplikacja działa lokalnie (z możliwością wdrożenia w chmurze) i zapisuje dane w MongoDB. System umożliwia tworzenie zadań z pomocą AI, przypisywanie podobnych przypadków oraz inteligentne zamykanie zadań na podstawie oceny podsumowania.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+     "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,138 +1,133 @@
-# 📘 Przegląd projektu – AI Task App
+# 📘 Przegląd projektu – AI Task App (wersja rozszerzona)
 
-AI Task App to aplikacja webowa wspierana przez GPT-4o, która pełni rolę osobistego asystenta technicznego do zarządzania zadaniami. Głównym celem projektu jest umożliwienie użytkownikom (głównie technicznym: programistom, specjalistom IT, naukowcom) szybkiego dokumentowania problemów, porządkowania wiedzy oraz odnajdywania rozwiązań na podstawie przeszłych przypadków.
-
-System wspiera zarówno tworzenie zadań z pomocą AI, jak i manualne, oraz umożliwia ich zamykanie z inteligentnym podsumowaniem lub przez kopiowanie rozwiązania z innego zadania.
+AI Task App to aplikacja webowa wspierana przez GPT-4o, która pełni rolę osobistego asystenta technicznego do zarządzania zadaniami. Łączy nowoczesne technologie frontendowe i backendowe, oferując funkcje tworzenia, przeglądania, zamykania oraz porównywania zadań z wykorzystaniem AI.
 
 ---
 
 ## 🎯 Cele systemu
 
-- Ułatwienie dokumentowania pracy i problemów technicznych
-- Możliwość ponownego wykorzystania wiedzy (poprzez podobne zadania)
-- Wspomaganie analizy i opisu zadań przy pomocy GPT-4o
-- Zwiększenie produktywności i zmniejszenie wysiłku poznawczego
-- W przyszłości – zbudowanie osobistej bazy wiedzy i rozwiązanych przypadków
+- Ułatwienie dokumentowania problemów technicznych
+- Wspomaganie opisu i analizy zadań przez GPT-4o
+- Odnajdywanie podobnych przypadków z przeszłości dzięki embeddingom
+- W przyszłości: osobista baza wiedzy, współpraca zespołowa
+- Redukcja wysiłku poznawczego i lepsza organizacja pracy
 
 ---
 
 ## 🧱 Architektura aplikacji
 
-### Backend:
+### Backend
 
-- Node.js + Express
-- MongoDB + Mongoose
-- OpenAI API (GPT-4o + text-embedding-3-small)
-- JWT (uwierzytelnianie), bcrypt (haszowanie haseł)
-- Express-validator (walidacja pól), middleware, modularny podział
+- Node.js + Express + MongoDB
+- JWT do autoryzacji, bcrypt do haseł
+- GPT-4o + text-embedding-3-small (OpenAI)
+- Modularna struktura: controllers, middleware, services, routes
+- AES-256-GCM do szyfrowania kluczy API
+- Przechowywanie embeddingów i porównania cosine similarity
+- REST API zgodne z zasadami HTTP (np. `PATCH` do zamykania)
 
-### Frontend:
+### Frontend
 
-- Planowany: React + Tailwind CSS
-- Interfejs do przeglądania i tworzenia zadań
-- Obsługa zamykania zadania z AI i kopiowania `summary`
-- Obsługa JWT i sesji użytkownika
-
----
-
-## 📦 Model danych `Task`
-
-Zadanie zawiera:
-
-- `title` – krótki tytuł (może być wygenerowany przez AI)
-- `description` – pełny opis (wymagany)
-- `difficulty` – trudność (1–5, opcjonalna, generowana przez AI)
-- `dueDate` – termin wykonania (opcjonalny)
-- `summary` – podsumowanie po zakończeniu (ręczne lub przez AI)
-- `status` – `"open"` lub `"closed"`
-- `closedAt` – data zamknięcia
-- `embedding` – wektor wygenerowany na potrzeby porównań
-- `similarTasks` – lista ID podobnych zadań
-- `ownerId`, `createdAt` – standardowe metadane
+- React + Vite + TailwindCSS v4
+- `AuthContext` do zarządzania sesją
+- `ProtectedRoute` do ochrony widoków
+- `Header` z dynamiczną zawartością (login/logout/dashboard)
+- `fetch()` do komunikacji z API
+- Token JWT w `localStorage`
+- Planowana rozbudowa: `services/`, `TaskFormPage`, panel admina
 
 ---
 
-## 🔁 Obsługa zadań
+## 📦 Modele danych
 
-### Tworzenie zadania:
+### `Task`
 
-- `POST /api/tasks` – ręczne
-- `POST /api/tasks/ai-create` – z pomocą AI (function calling)
-  - AI analizuje `description`, generuje tytuł, szczegółowy opis, trudność i opcjonalnie termin
-  - Backend generuje embedding i przypisuje podobne zadania (`similarTasks`)
+- `title`, `description`, `difficulty`, `dueDate`
+- `summary`, `status`, `closedAt`
+- `embedding[]`, `similarTasks[]`
+- `ownerId`, `createdAt`
 
-### Edycja zadania:
+### `User`
 
-- `PATCH /api/tasks/:id`
-  - Można zmieniać: `title`, `description`, `dueDate`, `status`
-  - Walidacja pól jest opcjonalna – tylko jeśli występują (`PATCH`, nie `PUT`)
+- `email`, `password`, `role`, `approvedByAdmin`, `emailVerified`
+- Uwierzytelnianie JWT (token w nagłówku)
 
-### Zamykanie zadania:
+### `ApiKey`
 
-- `PATCH /api/tasks/:id/ai-close`
-
-  - Wymagane pole: `summary`
-  - AI ocenia jego jakość
-  - Jeśli słabe – zwraca błąd, chyba że `force: true`
-  - Wygładzenie opisu odbywa się przez `function calling`
-
-- `PATCH /api/tasks/:id/close`
-  - Kopiuje `summary` z innego zadania (`sourceTaskId`)
-  - AI nie bierze udziału
-  - `summary` nie może być przesyłane – tylko ID
+- `scope`, `encryptedKey`, `iv`, `tag`
+- Obsługa kluczy OpenAI z szyfrowaniem AES-256-GCM
 
 ---
 
-## 🧠 Porównywanie podobnych zadań (embeddingi)
+## 🔁 Przepływ zadań
 
-- Przy tworzeniu zadania (AI) backend tworzy embedding (OpenAI `text-embedding-3-small`)
-- Porównanie z embeddingami zamkniętych zadań (`cosine similarity`)
-- Maksymalnie 5 zadań z podobieństwem ≥ 0.75 trafia do `similarTasks`
-- Użytkownik może później wskazać, które były naprawdę pomocne
+1. Użytkownik tworzy zadanie (manualnie lub z pomocą AI)
+2. Backend generuje embedding (`text-embedding-3-small`)
+3. Porównuje z istniejącymi zadaniami (`cosine similarity`)
+4. Przypisuje do `similarTasks`
+5. Zadanie może być zamknięte:
+   - przez ocenę i wygładzenie `summary` (AI)
+   - lub przez kopiowanie `summary` z innego zadania
 
 ---
 
-## 🔐 System kont
+## 🔐 System użytkowników
 
-- Rejestracja użytkownika tylko przez zaproszenie
-- JWT + middleware autoryzujące trasy
+- Rejestracja: `POST /api/auth/register`
+  - Konto wymaga zatwierdzenia przez admina
+- Logowanie: `POST /api/auth/login` → JWT
 - Role: `user`, `admin` (planowane)
+- Frontend wykorzystuje `AuthContext` + `ProtectedRoute`
+
+---
+
+## 🧠 Wsparcie AI
+
+- GPT-4o generuje:
+  - `title`, `description`, `difficulty`, `dueDate`
+  - ocenia `summary` i poprawia język
+- AI dostępne przez `function calling` z OpenAI SDK
+- Każda sesja AI ma kontekstowy prompt z datą i zadaniem
+
+---
+
+## 📁 Struktura monorepo
+
+```
+ai-task-app/
+├── backend/              # API + AI + MongoDB
+├── frontend/             # React + Vite + Tailwind
+├── docs/                 # Pełna dokumentacja Markdown
+├── .gitmodules
+└── README.md             # Główne podsumowanie projektu
+```
 
 ---
 
 ## ⚙️ Technologie
 
-- OpenAI API (GPT-4o, embeddings)
-- Express, Mongoose, JWT
-- MongoDB lokalnie i MongoDB Atlas (backup)
-- Prettier (formatowanie kodu)
-- Planowany frontend: React + TailwindCSS
+| Warstwa  | Technologie                            |
+| -------- | -------------------------------------- |
+| Backend  | Node.js, Express, MongoDB, OpenAI, AES |
+| Frontend | React, TailwindCSS v4, Vite            |
+| API      | REST, JWT, fetch, Authorization        |
+| AI       | GPT-4o, text-embedding-3-small         |
+| Inne     | bcrypt, dotenv, concurrently, prettier |
 
 ---
 
-## 📄 Dokumentacja i struktura repozytorium
+## 🧪 Testowanie
 
-```
-ai-task-app/
-├── backend/     ← podrepozytorium backendu (Express)
-├── frontend/    ← (planowany interfejs React)
-├── docs/        ← pełna dokumentacja markdown
-├── .gitmodules
-└── README.md
-```
+- `express-validator` – walidacja backend
+- `validate.js` + `sendError()` – warstwa błędów
+- (planowane) `Vitest`, `Cypress`, `Jest`, `mock fetch()`
 
 ---
 
-## 🧪 Testowanie i jakość
+## 🧩 Wnioski architektoniczne
 
-- Walidatory opierają się na `express-validator` i są dopasowane do REST (`POST`, `PATCH`)
-- Obsługa błędów z warstwą `validate.js` i `responseHandler.js`
-- W logice zamykania zadania AI decyduje o przyjęciu podsumowania
-
----
-
-## 📌 Wnioski architektoniczne
-
-- Wszystkie operacje zamykające to `PATCH`, zgodnie z REST
-- `summary` może być przesyłane tylko w `ai-close`, a jego jakość musi zostać oceniona
-- Rozdział AI i działań manualnych jest przejrzysty i zabezpieczony zarówno w backendzie, jak i UI
+- AI integruje się przez warstwę usług `services/`
+- Embeddingi i `similarTasks` są automatyczne
+- API rozdziela `ai-close` i `close` dla większej przejrzystości
+- Frontend i backend działają razem dzięki `concurrently`
+- Dokumentacja obsługuje obie warstwy i pozwala na rozbudowę systemu
