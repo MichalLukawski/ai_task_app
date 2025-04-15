@@ -70,21 +70,58 @@ services/
 
 ---
 
-## 📄 Przykład refaktoryzacji (LoginPage)
+## 📘 Przykładowe usługi
 
-Zamiast:
-
-```js
-const res = await fetch('/api/auth/login', ...);
-```
-
-Użyj:
+### 🔐 `authService.js`
 
 ```js
-const token = await authService.login(email, password);
-auth.login(token);
-navigate("/tasks");
+import axios from "../api/axios";
+
+export const login = async (credentials) => {
+  const response = await axios.post("/api/auth/login", credentials);
+  return response.data;
+};
+
+export const register = async (user) => {
+  const response = await axios.post("/api/auth/register", user);
+  return response.data;
+};
 ```
+
+### ✅ `taskService.js`
+
+```js
+import axios from "../api/axios";
+
+export const createTaskWithAI = async (description) => {
+  const response = await axios.post("/api/tasks/ai-create", { description });
+  return response.data;
+};
+
+export const updateTask = async (id, updates) => {
+  return axios.patch(`/api/tasks/${id}`, updates);
+};
+
+export const closeTask = async (id, sourceTaskId) => {
+  return axios.patch(`/api/tasks/${id}/close`, { sourceTaskId });
+};
+
+export const aiCloseTask = async (id, summary) => {
+  return axios.patch(`/api/tasks/${id}/ai-close`, { summary });
+};
+```
+
+---
+
+## 🧪 Korzyści z podziału na usługi
+
+| Korzyść                         | Opis                                                          |
+| ------------------------------- | ------------------------------------------------------------- |
+| 🔄 Reużywalność                 | Funkcje usług mogą być używane w wielu komponentach i hookach |
+| 🔎 Testowalność                 | Logika biznesowa oddzielona od komponentów UI                 |
+| 🔍 Czytelność                   | Komponenty stają się czystsze, skupione na interfejsie        |
+| 📦 Gotowość na lazy loading     | Możliwość importu dynamicznego według potrzeb                 |
+| 🔧 Możliwość refaktoryzacji API | Łatwa wymiana backendu bez ingerencji w warstwę prezentacji   |
 
 ---
 
@@ -97,6 +134,24 @@ navigate("/tasks");
 | `RegisterPage` | wywołuje `register()`                  |
 | `TasksPage`    | używa `getTasks()`                     |
 | `TaskFormPage` | (planowane) użyje `createTaskWithAI()` |
+
+---
+
+## 🚧 Aktualny status w kodzie
+
+- ✅ `axios.js` skonfigurowany i używany w wielu komponentach
+- ❌ Brak folderu `services/` – wywołania API znajdują się bezpośrednio w komponentach (`CreateTaskForm`, `TaskCardEdit`)
+- 🛠️ Rekomendowane: przenieść logikę API z komponentów do usług (`taskService.js`, `authService.js`)
+- 🔍 Komponenty takie jak `CreateTaskForm`, `TaskCardEdit` i `LoginPage` mogą zyskać na uproszczeniu po refaktoryzacji
+
+---
+
+## 🔜 Plan rozwoju
+
+- [ ] Utworzenie folderu `services/`
+- [ ] Przeniesienie wszystkich zapytań Axios do `taskService.js` i `authService.js`
+- [ ] Stosowanie tych usług w komponentach i hookach
+- [ ] Opcjonalnie: dodanie typów (JSDoc, TS) i testów jednostkowych
 
 ---
 

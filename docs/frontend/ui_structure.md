@@ -23,11 +23,17 @@ Ten dokument przedstawia szczegółowy opis struktury interfejsu użytkownika (U
   - dynamiczne linki po prawej (`Login`, `Register`, `Logout`, `Dashboard`)
 - Dostosowuje treść do stanu logowania (`useAuth()`)
 
-### 2. 📄 Widok główny (`main`)
+### 🔹 Widoki (`pages/`)
 
-- Każda strona (`WelcomePage`, `LoginPage`, `TasksPage`) renderowana wewnątrz `<Routes>`
-- Nie stosujemy dedykowanego komponentu layoutu (jak `MainLayout`) – ale można to rozważyć w przyszłości
-- Stylizowane z wykorzystaniem `min-h-screen`, `flex`, `justify-center`, `px-4`, `py-8`
+- `WelcomePage` – ekran startowy dla wszystkich użytkowników.
+- `LoginPage` i `RegisterPage` – formularze logowania i rejestracji.
+- `DashboardPage` – główny widok użytkownika po zalogowaniu, zawierający:
+  - pasek nagłówkowy (Header),
+  - formularz tworzenia zadania (`CreateTaskForm`),
+  - listę zadań (`TaskList` z kartami `TaskCard`),
+  - komponenty pomocnicze: `DifficultyStars`, `DueDateProgress`, `DueDateEditor`.
+
+---
 
 ### 3. 🔐 Chronione trasy (`ProtectedRoute`)
 
@@ -53,23 +59,51 @@ Ten dokument przedstawia szczegółowy opis struktury interfejsu użytkownika (U
 </body>
 ```
 
+## 🗺️ Schemat widoku Dashboard
+
+```
++------------------------------------------------------+
+| Header (zawsze widoczny)                            |
++------------------------------------------------------+
+|                                                      |
+| CreateTaskForm [formularz AI]                        |
+|                                                      |
+| +-----------------------------------------------+    |
+| | TaskCard (1)                                   |    |
+| | - tytuł, opis, trudność, termin                |    |
+| | - przyciski: Edytuj, Zakończ                   |    |
+| +-----------------------------------------------+    |
+|                                                      |
+| +-----------------------------------------------+    |
+| | TaskCard (2)                                   |    |
+| | ...                                             |    |
+| +-----------------------------------------------+    |
++------------------------------------------------------+
+```
+
+---
+
+## 🧩 Główne komponenty UI
+
+| Komponent         | Opis                                                                    |
+| ----------------- | ----------------------------------------------------------------------- |
+| `CreateTaskForm`  | Formularz oparty o AI, umożliwiający tworzenie zadań z opisu tekstowego |
+| `TaskList`        | Kontener renderujący kolejne `TaskCard`                                 |
+| `TaskCard`        | Widok zadania (z możliwością edycji lub zamknięcia)                     |
+| `TaskCardView`    | Widok podglądu (readonly) pojedynczego zadania                          |
+| `TaskCardEdit`    | Tryb edycji zadania z możliwością zmiany daty, poziomu trudności        |
+| `DifficultyStars` | Prezentacja i edycja trudności (skala 1–5)                              |
+| `DueDateProgress` | Pasek postępu czasu do terminu wykonania                                |
+| `DueDateEditor`   | Pole wyboru daty zakończenia zadania                                    |
+
 ---
 
 ## 📐 Stylowanie i layouty
 
-- Wszystkie komponenty używają klas Tailwind (`text-gray-800`, `bg-gray-50`, `rounded`, itp.)
-- Layout jest oparty na **Flexbox** (`flex`, `items-center`, `justify-between`)
-- Brak użycia CSS-in-JS, SCSS czy Bootstrap
-- Kolory, rozmiary i odstępy kontrolowane przez Tailwind
-- `index.css` zawiera tylko:
-
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-
----
+- UI oparty wyłącznie na **TailwindCSS**
+- Użycie klas utility: `flex`, `grid`, `gap`, `rounded`, `shadow`, `text-`, `bg-`, `hover-`
+- Obsługa trybu mobilnego (`sm:`, `md:`)
+- Brak użycia CSS modules, SCSS, styled-components
 
 ## 📱 Responsywność
 
@@ -81,27 +115,38 @@ Ten dokument przedstawia szczegółowy opis struktury interfejsu użytkownika (U
 
 ---
 
-## 🗺️ Widoki UI – zachowanie
+## ✅ Zrealizowane funkcje UI
 
-| Widok        | Layout główny            | Zawartość UI                                 |
-| ------------ | ------------------------ | -------------------------------------------- |
-| `/`          | WelcomePage              | nagłówek, opis, linki do login/register      |
-| `/login`     | LoginPage                | formularz logowania, błąd, przekierowanie    |
-| `/register`  | RegisterPage             | formularz rejestracji, walidacja             |
-| `/tasks`     | TasksPage                | lista zadań, dostępne tylko dla zalogowanych |
-| `/tasks/new` | TaskFormPage (planowane) | formularz AI, odpowiedź GPT, zapis zadania   |
+| Funkcja                           | Status | Uwagi                                                 |
+| --------------------------------- | ------ | ----------------------------------------------------- |
+| Pasek nawigacyjny (`Header`)      | ✅     | Dynamiczny na podstawie `useAuth()`                   |
+| Formularz tworzenia zadania (AI)  | ✅     | `CreateTaskForm`, integracja z GPT                    |
+| Wyświetlanie zadań w postaci kart | ✅     | `TaskList`, `TaskCard` z podglądem/edycją             |
+| Wizualizacja trudności (`Stars`)  | ✅     | `DifficultyStars`, tryb readonly i edycji             |
+| Pasek terminu (`DueDateProgress`) | ✅     | Kolor i szerokość paska zależna od czasu do `dueDate` |
+| Edycja daty (`DueDateEditor`)     | ✅     | Walidacja, wpisywanie lub wybór terminu               |
 
 ---
 
-## 🔧 Planowane ulepszenia UI
+## 🛠️ Potencjalne rozszerzenia UI
 
-| Funkcja          | Opis                                                 |
-| ---------------- | ---------------------------------------------------- |
-| `MainLayout.jsx` | komponent layoutu z nagłówkiem i `Outlet`            |
-| `LoadingSpinner` | komponent do obsługi `isLoading` (`AuthContext`, AI) |
-| `TaskCard`       | komponent zadania w `TasksPage`                      |
-| `EmptyState`     | stan pustej listy zadań lub braku wyników            |
-| `FormField`      | komponent formularzowy (input, label, błędy)         |
+| Funkcja                  | Status       | Uwagi                                                  |
+| ------------------------ | ------------ | ------------------------------------------------------ |
+| Filtrowanie zadań        | 🔜 planowane | Na podstawie statusu, trudności, terminu               |
+| Widok zakończonych zadań | 🔜 planowane | Oddzielna sekcja lub filtr                             |
+| Powiadomienia / Alerty   | 🔜 planowane | Komunikaty sukcesu/błędu w formularzach i interakcjach |
+| Spinner ładowania        | 🔜 planowane | Podczas zapytań do AI i pobierania danych              |
+| EmptyState               | 🔜 planowane | Komunikat, gdy lista zadań jest pusta                  |
+
+---
+
+## 🧩 Relacje komponentów
+
+- `DashboardPage` używa: `CreateTaskForm`, `TaskList`
+- `TaskList` renderuje wiele `TaskCard`
+- `TaskCard` wewnętrznie korzysta z `TaskCardView` lub `TaskCardEdit` w zależności od trybu
+- `TaskCardEdit` korzysta z `DueDateEditor`, `DifficultyStars`
+- `TaskCardView` korzysta z `DueDateProgress`, `DifficultyStars`
 
 ---
 

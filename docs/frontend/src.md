@@ -6,18 +6,37 @@ Plik ten dokumentuje zawartość katalogu `src/`, stanowiącego główny punkt w
 
 ## 📦 Ogólna struktura katalogu `src/`
 
+## 📦 Struktura katalogu `src/`
+
 ```
 src/
-├── assets/          # Zasoby statyczne (np. logotypy, SVG)
-├── components/      # Komponenty współdzielone (Header, Input, Modal itd.)
-├── context/         # Zarządzanie globalnym stanem (AuthContext)
-├── pages/           # Widoki stron (Welcome, Login, Register, Tasks itd.)
-├── services/        # Funkcje do komunikacji z backendem API
-├── styles/          # Style globalne (TailwindCSS – tylko index.css)
-├── App.jsx          # Główna struktura routingu + Header
-├── main.jsx         # Punkt wejścia React + Provider (AuthContext)
-├── index.css        # Tailwind: @tailwind base, components, utilities
-└── vite-env.d.ts    # (opcjonalnie) automatyczne typowanie env (jeśli TypeScript)
+├── api/
+│   └── axios.js
+├── assets/
+├── components/
+│   ├── Header.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── CreateTaskForm.jsx
+│   ├── TaskList.jsx
+│   ├── TaskCard.jsx
+│   ├── TaskCardView.jsx
+│   ├── TaskCardEdit.jsx
+│   ├── DifficultyStars.jsx
+│   ├── DueDateProgress.jsx
+│   └── DueDateEditor.jsx
+├── context/
+│   └── AuthContext.jsx
+├── hooks/
+│   └── useTaskCardState.js
+├── pages/
+│   ├── WelcomePage.jsx
+│   ├── LoginPage.jsx
+│   ├── RegisterPage.jsx
+│   └── DashboardPage.jsx
+├── utils/
+│   └── dateUtils.js
+├── App.jsx
+└── main.jsx
 ```
 
 ---
@@ -33,13 +52,19 @@ src/
 
 ### 📁 `components/`
 
-Komponenty wielokrotnego użytku – np.:
+Zawiera **wszystkie komponenty wielokrotnego użytku** aplikacji. Główne grupy:
 
-- `Header.jsx` – widoczny na każdej stronie, zawiera nawigację zależną od logowania
-- `ProtectedRoute.jsx` – otacza komponenty wymagające autoryzacji
-- `Input.jsx`, `Button.jsx` – potencjalne komponenty UI
+- **Nawigacja i autoryzacja**: `Header`, `ProtectedRoute`
+- **Obsługa zadań**:
+  - `CreateTaskForm` – tworzenie zadania z AI
+  - `TaskList` – kontener na karty zadań
+  - `TaskCard`, `TaskCardView`, `TaskCardEdit` – prezentacja i edycja zadania
+- **Elementy interfejsu**:
+  - `DifficultyStars` – prezentacja i wybór trudności
+  - `DueDateProgress` – pasek postępu terminu
+  - `DueDateEditor` – pole edycji daty
 
-Każdy komponent powinien być **mały, deklaratywny, z pojedynczą odpowiedzialnością**.
+➡️ Szczegółowy opis znajduje się w pliku `components.md`.
 
 ---
 
@@ -56,17 +81,23 @@ Zawiera Reactowy kontekst globalny (`AuthContext.jsx`), który:
 
 ---
 
-### 📁 `pages/`
+## 🪝 `hooks/`
 
-Zawiera pełne widoki stron (zgodne z trasami):
+- `useTaskCardState.js` – niestandardowy hook do zarządzania trybem podglądu/edycji zadania (`TaskCard`).
+- Abstrahuje logikę UI i umożliwia przełączanie stanu w spójny sposób.
 
-- `WelcomePage.jsx` – ekran główny (nawigacja: Login / Register)
-- `LoginPage.jsx` – formularz logowania
-- `RegisterPage.jsx` – formularz rejestracji
-- `TasksPage.jsx` – strona z listą zadań użytkownika
-- `TaskFormPage.jsx` – (planowane) – tworzenie zadania z AI
+➡️ Pełny opis hooków znajduje się w `hooks.md`.
 
-Każda strona stanowi samodzielny widok nawigacyjny (`Route`).
+## 📄 `pages/`
+
+Zawiera komponenty widoków powiązane z trasami (`react-router-dom`):
+
+- `WelcomePage` – ekran powitalny (`/`)
+- `LoginPage` – formularz logowania (`/login`)
+- `RegisterPage` – formularz rejestracji (`/register`)
+- `DashboardPage` – główny widok użytkownika (`/dashboard`) z listą zadań i formularzem
+
+➡️ Szczegóły: `pages.md`
 
 ---
 
@@ -79,6 +110,11 @@ Zawiera funkcje odpowiedzialne za komunikację z backendem przez REST API.
 - `api.js` (opcjonalnie) – ustawienia endpointów, np. `VITE_API_URL`
 
 ---
+
+## ⚙️ `utils/`
+
+- `dateUtils.js` – funkcje do przetwarzania dat (np. obliczanie postępu terminu, formatowanie).
+- Wspierają komponenty takie jak `DueDateProgress`.
 
 ## 📄 Pliki główne
 
@@ -103,6 +139,14 @@ Zawiera funkcje odpowiedzialne za komunikację z backendem przez REST API.
 ```
 
 ---
+
+## 🧩 Zasady organizacji kodu
+
+- Folder `components/` zawiera tylko komponenty UI – logika powinna być delegowana do hooków lub utils
+- Folder `pages/` – tylko komponenty widokowe, powiązane z trasami
+- `hooks/` i `utils/` – wspierające logikę i funkcjonalność
+- `api/` – komunikacja z backendem (rozszerzalne na `taskService`, `authService`, itp.)
+- `context/` – dane globalne (obecnie tylko `AuthContext`)
 
 ## 🎨 Stylowanie
 
@@ -156,10 +200,8 @@ Zawiera funkcje odpowiedzialne za komunikację z backendem przez REST API.
 
 ## 📄 Dokumentacja powiązana
 
-- `pages.md`
-- `components.md`
-- `context.md`
-- `services.md`
-- `routing.md`
-- `auth_flow.md`
-- `frontend_readme.md`
+- `components.md` – szczegóły komponentów
+- `pages.md` – komponenty widokowe
+- `routing.md` – konfiguracja tras
+- `hooks.md` – logika niestandardowych hooków
+- `utils.md` – funkcje pomocnicze

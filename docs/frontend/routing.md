@@ -1,14 +1,12 @@
 # 🧭 Dokumentacja – Routing w AI Task App (Frontend)
 
-📌 **Uwaga:** Aplikacja frontendowa AI Task App obecnie nie posiada osobnego folderu `routing/`. Logika tras znajduje się bezpośrednio w pliku `App.jsx`. Ten dokument opisuje aktualny stan konfiguracji routingu oraz przedstawia propozycję struktury docelowej (planowanej), która może zostać wdrożona w przyszłości dla lepszej separacji odpowiedzialności.
+Dokument ten opisuje mechanizm routingu w aplikacji frontendowej AI Task App, oparty na bibliotece `react-router-dom`. Routing odpowiada za mapowanie tras URL na konkretne komponenty widokowe (`pages/`) oraz zabezpieczanie dostępu do wybranych widoków za pomocą `ProtectedRoute`.
 
 ---
 
-## 📍 Aktualna konfiguracja (plik `App.jsx`)
+## ⚙️ Implementacja: plik `App.jsx`
 
-Routing w aplikacji opiera się na `react-router-dom`. Główna konfiguracja znajduje się w pliku `App.jsx`, gdzie zadeklarowane są wszystkie trasy.
-
-### ✨ Struktura tras:
+W aktualnej wersji aplikacji routing znajduje się bezpośrednio w pliku `App.jsx` i wygląda następująco:
 
 ```jsx
 <Routes>
@@ -16,99 +14,103 @@ Routing w aplikacji opiera się na `react-router-dom`. Główna konfiguracja zna
   <Route path="/login" element={<LoginPage />} />
   <Route path="/register" element={<RegisterPage />} />
   <Route
-    path="/tasks"
+    path="/dashboard"
     element={
       <ProtectedRoute>
-        <TasksPage />
+        <DashboardPage />
       </ProtectedRoute>
     }
   />
 </Routes>
 ```
 
-### 🔐 Ochrona tras:
+---
 
-- Trasa `/tasks` jest zabezpieczona przez komponent `ProtectedRoute`
-- Sprawdza `isAuthenticated` z `AuthContext`
-- Przekierowuje niezalogowanego użytkownika do `/login`
+## 📌 Opis zarejestrowanych tras
+
+| Ścieżka      | Komponent       | Dostęp                 | Opis                                                                 |
+| ------------ | --------------- | ---------------------- | -------------------------------------------------------------------- |
+| `/`          | `WelcomePage`   | Publiczny              | Strona startowa z informacją o aplikacji                             |
+| `/login`     | `LoginPage`     | Publiczny (dla gości)  | Formularz logowania użytkownika                                      |
+| `/register`  | `RegisterPage`  | Publiczny (dla gości)  | Formularz rejestracji użytkownika                                    |
+| `/dashboard` | `DashboardPage` | Tylko dla zalogowanych | Główny panel użytkownika z listą zadań, formularzem AI, akcjami CRUD |
 
 ---
 
-## ✅ Dostępne ścieżki i ich funkcje
+## 🔐 Ochrona tras – `ProtectedRoute`
 
-| Ścieżka      | Komponent      | Dostęp                 | Opis                                     |
-| ------------ | -------------- | ---------------------- | ---------------------------------------- |
-| `/`          | `WelcomePage`  | publiczny              | Ekran powitalny, linki do login/register |
-| `/login`     | `LoginPage`    | tylko dla gości        | Logowanie użytkownika                    |
-| `/register`  | `RegisterPage` | tylko dla gości        | Rejestracja nowego użytkownika           |
-| `/tasks`     | `TasksPage`    | tylko dla zalogowanych | Lista zadań użytkownika                  |
-| `/tasks/new` | `TaskFormPage` | (planowane)            | Tworzenie nowego zadania z pomocą AI     |
-
----
-
-## 🔁 Zachowanie po zalogowaniu i wylogowaniu
-
-- Po zalogowaniu → przekierowanie do `/tasks`
-- Po `logout()` w `Header` → przekierowanie do `/`
-
----
-
-## 🛡️ Ochrona tras – `ProtectedRoute`
+Komponent `ProtectedRoute` zabezpiecza trasę `/dashboard`:
 
 ```jsx
 <Route
-  path="/tasks"
+  path="/dashboard"
   element={
     <ProtectedRoute>
-      <TasksPage />
+      <DashboardPage />
     </ProtectedRoute>
   }
 />
 ```
 
-- Komponent `ProtectedRoute` chroni widoki przed dostępem osób nieautoryzowanych
-- Jeśli `AuthContext` zwraca `isLoading`, komponent tymczasowo nie renderuje nic (`null`)
-- Jeśli `!isAuthenticated`, użytkownik jest przekierowywany do `/login`
+Mechanizm działania:
+
+- Jeśli `isLoading === true` (np. trwa odczyt tokena) → zwraca `null`
+- Jeśli użytkownik nie jest zalogowany (`!isAuthenticated`) → przekierowanie do `/login`
+- Jeśli użytkownik jest zalogowany → renderuje `children` (czyli np. `DashboardPage`)
 
 ---
 
-## 💡 Planowana struktura (propozycja)
+## 🔁 Zachowania domyślne
 
-Dla większej skalowalności projektu warto przenieść routing do osobnego katalogu.
+- ✅ Po zalogowaniu: przekierowanie na `/dashboard`
+- ✅ Po wylogowaniu (`logout()` z `Header`): przekierowanie na `/`
 
-### 📁 Propozycja struktury:
+---
+
+## ❌ Trasy niezaimplementowane
+
+Poniższa trasa była planowana, ale nie została zaimplementowana:
+
+| Ścieżka      | Komponent      | Status       | Uwagi                                                                             |
+| ------------ | -------------- | ------------ | --------------------------------------------------------------------------------- |
+| `/tasks/new` | `TaskFormPage` | ❌ planowany | Formularz tworzenia zadania z pomocą AI został zintegrowany w `DashboardPage.jsx` |
+
+---
+
+## 💡 Propozycja refaktoryzacji struktury
+
+Aby zwiększyć skalowalność i czytelność projektu, routing może zostać przeniesiony do osobnego katalogu:
 
 ```
 src/
 ├── routing/
-│   ├── routes.js         # Wszystkie trasy z przypisanymi komponentami
-│   ├── GuestRoutes.jsx   # Trasy publiczne (np. login, register)
-│   ├── ProtectedRoutes.jsx # Trasy prywatne (np. tasks, dashboard)
-│   └── RouteConfig.jsx   # Główna konfiguracja routera
+│   ├── RouteConfig.jsx       # Główna konfiguracja routera
+│   ├── GuestRoutes.jsx       # Trasy dostępne publicznie
+│   ├── ProtectedRoutes.jsx   # Trasy wymagające autoryzacji
+│   └── routes.js             # Zbiór wszystkich ścieżek i ich komponentów
 ```
 
-### 🧩 Korzyści z takiego podziału:
+Korzyści:
 
-- lepsza czytelność,
-- łatwiejsze dodawanie tras i layoutów,
-- separacja odpowiedzialności (`auth`, `guest`, `admin`),
-- gotowość do rozbudowy aplikacji (np. `/admin`, `/profile`, `/settings`).
+- modularna struktura kodu,
+- rozdział odpowiedzialności (auth / dashboard / admin...),
+- łatwe wprowadzenie lazy-loadingu i kodu asynchronicznego,
+- gotowość na rozbudowę aplikacji (np. `/profile`, `/admin`, `/tasks/:id`)
 
 ---
 
-## 🧭 Podsumowanie
+## 🔎 Zalecenia
 
-- Routing aplikacji oparty jest na `react-router-dom`
-- Konfiguracja znajduje się w `App.jsx`
-- Trasy są bezpośrednio powiązane z komponentami z `pages/`
-- Zabezpieczone trasy (`/tasks`) wymagają `ProtectedRoute`
-- Przyszłościowo warto wydzielić routing do osobnego katalogu i dodać lazy-loading
+- ✅ W kodzie należy konsekwentnie używać `/dashboard` jako trasy głównej użytkownika (nie `/tasks`)
+- ✅ Należy usunąć przestarzałe wzmianki o trasie `/tasks/new` w dokumentacji
+- 🛠️ W przyszłości warto wprowadzić komponent `Layout`, który będzie renderował `Header` + `Outlet`, pozwalając uprościć konfigurację tras
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `pages.md` – komponenty przypisane do poszczególnych tras
-- `context.md` – `useAuth()` wykorzystywany w `ProtectedRoute`
-- `components.md` – `ProtectedRoute.jsx`
-- `src.md` – ogólna struktura frontendowego katalogu
+- `pages.md` – opisy komponentów przypisanych do tras
+- `components.md` – `ProtectedRoute`, `Header`
+- `context.md` – `useAuth()` i jego wpływ na routing
+- `src.md` – ogólna struktura katalogów frontendowych
+- `task_flow.md` – szczegółowy opis działania panelu użytkownika i ścieżek zadań

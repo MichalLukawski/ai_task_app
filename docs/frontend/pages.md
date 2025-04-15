@@ -1,6 +1,6 @@
 # 📄 Dokumentacja – `pages/` (Frontend AI Task App)
 
-Folder `src/pages/` zawiera główne widoki (strony) aplikacji. Każdy plik odpowiada jednemu z komponentów React reprezentujących trasę w aplikacji (zgodnie z konfiguracją `react-router-dom`). Widoki są spójnie stylizowane przy użyciu TailwindCSS i podzielone logicznie według funkcjonalności.
+Folder `src/pages/` zawiera główne widoki (strony) aplikacji. Każdy plik odpowiada jednemu z komponentów React reprezentujących trasę w aplikacji (zgodnie z konfiguracją `react-router-dom`). Widoki te są odpowiedzialne za obsługę kluczowych funkcjonalności: autoryzacji, prezentacji danych zadań oraz tworzenia ich z pomocą AI.
 
 ---
 
@@ -11,19 +11,17 @@ pages/
 ├── WelcomePage.jsx       # Ekran powitalny aplikacji
 ├── LoginPage.jsx         # Formularz logowania
 ├── RegisterPage.jsx      # Formularz rejestracji
-├── TasksPage.jsx         # Panel użytkownika z zadaniami (dawniej Dashboard)
-├── TaskFormPage.jsx      # (Planowane) formularz tworzenia zadania
+├── DashboardPage.jsx     # Panel użytkownika z zadaniami (obecnie aktywny widok)
 ```
 
 ---
 
 ## 🧭 Zasady ogólne
 
-- Każda strona jest komponentem funkcjonalnym (`function ComponentName`)
-- Komponenty te są montowane przez router w `App.jsx` w zależności od ścieżki
-- Stylowanie odbywa się wyłącznie przez TailwindCSS (`className`)
-- Nie zawierają wewnętrznych zależności typu `useAuth()` (z wyjątkiem `LoginPage`)
-- Layout (`Header`) znajduje się **poza** widokiem i ładowany globalnie
+- Każda strona jest komponentem funkcyjnym (`function ComponentName`)
+- Widoki są montowane przez `App.jsx` na podstawie trasy (`react-router-dom`)
+- Stylizacja: wyłącznie z użyciem TailwindCSS (`className`)
+- Komponenty z `pages/` nie implementują niskopoziomowej logiki – korzystają z komponentów z `components/`, hooków oraz kontekstu
 
 ---
 
@@ -31,14 +29,14 @@ pages/
 
 ### 📌 Opis
 
-- Pierwszy widok po wejściu na aplikację (`/`)
-- Zawiera nazwę systemu (`AI Task App`) oraz krótki opis jego roli
-- Widoczny zarówno dla zalogowanych, jak i niezalogowanych użytkowników
+- Trasa: `/`
+- Ogólny ekran startowy, dostępny bez logowania
+- Zawiera nazwę aplikacji, opis systemu oraz odnośniki do logowania i rejestracji
 
 ### 📌 Funkcje
 
-- Dynamicznie pokazuje linki: `Login` i `Register` (po prawej w nagłówku)
-- Nie wymaga dostępu do API ani tokenu
+- Wyświetla zawartość statyczną + linki `Login`, `Register`
+- Komponent informacyjny, nie korzysta z API
 
 ---
 
@@ -47,21 +45,16 @@ pages/
 ### 📌 Opis
 
 - Trasa: `/login`
-- Pozwala użytkownikowi zalogować się do systemu
+- Formularz logowania użytkownika
 
 ### 📌 Logika
 
-- Obsługuje `email` i `password`
-- Wysyła żądanie `POST /api/auth/login`
-- Po sukcesie:
-  - zapisuje token do `localStorage`
-  - wywołuje `login(token)` z `useAuth()`
-  - przekierowuje na `/tasks`
-
-### 📌 Walidacja
-
-- Email musi mieć poprawny format
-- Hasło wymagane
+- Pola: `email`, `password`
+- Wysyła `POST /api/auth/login` z danymi logowania
+- Obsługuje:
+  - zapis tokena do `localStorage`
+  - aktualizację kontekstu `AuthContext` poprzez `login(token)`
+  - przekierowanie do `/dashboard` po sukcesie
 
 ---
 
@@ -70,79 +63,62 @@ pages/
 ### 📌 Opis
 
 - Trasa: `/register`
-- Umożliwia nowemu użytkownikowi utworzenie konta
+- Formularz rejestracji nowego użytkownika
 
 ### 📌 Logika
 
-- Obsługuje `email`, `password`, `confirmPassword`
-- Wysyła żądanie `POST /api/auth/register`
-- Po sukcesie pokazuje komunikat o oczekiwaniu na zatwierdzenie przez admina
-
-### 📌 Walidacja
-
-- Email – poprawny format
-- Hasło – min. długość, zgodność z `confirmPassword`
-
-### 📌 Przyszłość
-
-- Potwierdzenie e-mail przez link aktywacyjny
-- Panel dla administratora
+- Pola: `email`, `password`, `confirmPassword`
+- Wysyła `POST /api/auth/register`
+- Wyświetla komunikat o rejestracji
+- Obecnie nie następuje automatyczne logowanie po rejestracji
 
 ---
 
-## 📂 TasksPage.jsx (planowane)
+## 📂 DashboardPage.jsx (dawniej TasksPage)
 
 ### 📌 Opis
 
-- Główny widok zalogowanego użytkownika (`/tasks`)
+- Trasa: `/dashboard`
+- Główny widok użytkownika po zalogowaniu
 - Zabezpieczony przez `ProtectedRoute`
 
-### 📌 Funkcje
+### 📌 Funkcjonalność
 
-- Wyświetla listę zadań użytkownika (pobranych z API)
-- Obsługuje:
-  - tytuł zadania
-  - opis
-  - datę, status, trudność
-- Planowane: możliwość filtrowania, tworzenia, zamykania zadania
+- Pobiera listę zadań użytkownika z API (`GET /api/tasks`)
+- Renderuje listę `TaskCard` (poprzez `TaskList`)
+- Pozwala na:
+  - dodawanie nowego zadania z pomocą AI (`CreateTaskForm`)
+  - przegląd, edycję i zamykanie zadań (`TaskCardView` / `TaskCardEdit`)
+  - podgląd poziomu trudności (`DifficultyStars`) i terminu (`DueDateProgress`)
 
 ### 📌 Stylizacja
 
-- Lista kart zadaniowych (`TaskCard`)
-- Ewentualne użycie `grid`, `flex-col`, `gap-4`
+- Layout oparty o Tailwind (`flex`, `gap-4`, `w-full`, `max-w-screen-md`)
+- Responsywność: mobilna i desktopowa
 
 ---
 
-## 📝 TaskFormPage.jsx (planowany)
+## 🧩 Relacje między widokami i komponentami
 
-### 📌 Opis
-
-- Trasa: `/tasks/new`
-- Pozwala użytkownikowi utworzyć nowe zadanie z pomocą AI
-
-### 📌 Logika
-
-- Wysyła `description` do endpointu `POST /api/tasks/ai-create`
-- Odbiera `title`, `description`, `difficulty`, `dueDate`
-- Zapisuje zadanie i generuje embedding
+| Strona        | Komponenty używane                                 | API                          | Uwagi                                               |
+| ------------- | -------------------------------------------------- | ---------------------------- | --------------------------------------------------- |
+| WelcomePage   | Header                                             | brak                         | Strona ogólnodostępna                               |
+| LoginPage     | Header, useAuth                                    | `/auth/login`                | Ustawienie tokena i redirect                        |
+| RegisterPage  | Header                                             | `/auth/register`             | Brak automatycznego logowania po rejestracji        |
+| DashboardPage | ProtectedRoute, TaskList, TaskCard, CreateTaskForm | `/tasks`, `/tasks/ai-create` | Główna funkcjonalność użytkownika (CRUD zadań + AI) |
 
 ---
 
-## 🧩 Relacje między widokami
+## 🧩 Uwagi i rozbieżności
 
-| Strona       | Komponenty używane     | API                | Kontekst                            |
-| ------------ | ---------------------- | ------------------ | ----------------------------------- |
-| WelcomePage  | Header                 | brak               | brak                                |
-| LoginPage    | Header, useAuth        | `/auth/login`      | `login()`                           |
-| RegisterPage | Header                 | `/auth/register`   | brak                                |
-| TasksPage    | Header, ProtectedRoute | `/tasks`           | `useAuth()` (pośrednio) (planowane) |
-| TaskFormPage | Header                 | `/tasks/ai-create` | możliwy fallback (planowane)        |
+- Nazwa `TasksPage.jsx` została zmieniona na `DashboardPage.jsx` – aktualna konwencja pliku i trasy to `/dashboard`
+- Brak osobnej strony `TaskFormPage.jsx` – funkcja tworzenia zadania z AI została zintegrowana z `DashboardPage` (formularz `CreateTaskForm` jako część widoku)
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `routing.md` – przypisanie tras do komponentów
-- `components.md` – Header, ProtectedRoute
-- `context.md` – `login()`, `logout()`, `isAuthenticated`
-- `services.md` – logika `authService`, `taskService`
+- `routing.md` – konfiguracja tras (`/`, `/login`, `/dashboard`)
+- `components.md` – opis `TaskCard`, `CreateTaskForm`, `DifficultyStars`
+- `task_flow.md` – szczegółowy przebieg tworzenia i obsługi zadania
+- `context.md` – logika uwierzytelniania (`useAuth`)

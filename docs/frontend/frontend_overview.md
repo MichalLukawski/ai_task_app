@@ -114,8 +114,8 @@ VITE_API_URL=http://localhost:5000/api
 - [x] Ochrona tras (`ProtectedRoute`)
 - [x] Dynamiczny Header
 - [x] Przechowywanie sesji (`localStorage`)
-- [ ] Widok zadań
-- [ ] Tworzenie zadania z AI
+- [x] Widok zadań
+- [x] Tworzenie zadania z AI
 - [ ] Panel admina
 - [ ] Obsługa feedbacku do podobnych zadań
 - [ ] Obsługa `.env` dla różnych środowisk

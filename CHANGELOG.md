@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.12] – 2025-04-14
+
+### Changed
+
+- Refaktoryzacja struktury katalogów i komponentów
+- Integracja z backendem OpenAI / GPT / Embedding
+- Aktualizacja changelogów i dokumentacji wersjonowanej
+
+### Planned
+
+- Osobny panel administratora
+- Deployment aplikacji na VPS lub Vercel + Mongo Atlas
+
+# Changelog
+
 ## [0.0.11] – 2025-04-13
 
 ### Added
