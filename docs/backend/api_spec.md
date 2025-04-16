@@ -1,6 +1,8 @@
-# 📘 Specyfikacja API – AI Task App (aktualna wersja)
+# 📘 Specyfikacja API – AI Task App (zaktualizowana wersja)
 
-Poniższa dokumentacja opisuje wszystkie dostępne endpointy API w aplikacji AI Task App. Zawiera wymagane dane wejściowe, odpowiedzi, formaty JSON oraz logikę działania. Wszystkie trasy (poza `/auth`) wymagają tokena JWT przesyłanego w nagłówku:
+Dokument zawiera kompletną specyfikację interfejsu API aplikacji AI Task App. Opisane zostały wszystkie dostępne endpointy HTTP, struktura żądań i odpowiedzi, typy danych oraz wymagania autoryzacyjne. Dane wejściowe są walidowane za pomocą `express-validator`, a odpowiedzi formatowane zgodnie z modułem `utils/responseHandler.js`.
+
+Wszystkie trasy (poza `/auth`) wymagają tokena JWT przesyłanego w nagłówku:
 
 ```
 Authorization: Bearer <JWT>
@@ -32,7 +34,7 @@ Rejestruje nowego użytkownika.
 }
 ```
 
-> Rejestracja wymaga późniejszego zatwierdzenia przez administratora oraz (opcjonalnie) potwierdzenia e-mail – system gotowy na 2-etapową aktywację.
+> Pola walidowane przez `authValidator.js`. Hasło jest szyfrowane z użyciem `bcrypt`. System gotowy do rozbudowy o e-mail verification i aktywację konta przez admina.
 
 ---
 
@@ -61,7 +63,7 @@ Loguje użytkownika i zwraca token JWT.
 }
 ```
 
-> Logowanie możliwe tylko, jeśli użytkownik został zatwierdzony przez admina (`approvedByAdmin: true`) i ma potwierdzony e-mail (`emailVerified: true`), jeśli funkcja została włączona.
+> Logowanie dostępne tylko dla zatwierdzonych użytkowników. Po zalogowaniu token zapisywany na froncie w `localStorage`.
 
 ---
 
@@ -82,9 +84,7 @@ Tworzy nowe zadanie ręcznie (bez AI).
 }
 ```
 
-**Response:**
-
-- `201 Created`
+**Response:** `201 Created` + zwrócony task (pełny)
 
 ---
 
@@ -100,17 +100,22 @@ Tworzy zadanie z pomocą GPT-4o (function calling).
 }
 ```
 
-**Response:**
+**Response:** `201 Created`
 
-- `201 Created` – zadanie utworzone z AI
-- Pole `description` jest wymagane (min. 5 znaków)
-- Backend generuje `embedding`, przypisuje `similarTasks`
+Zwracane pola:
+
+- `description` (poprawiony przez AI)
+- `title` (opcjonalnie wygenerowany)
+- `difficulty` (1–5)
+- `dueDate` (jeśli rozpoznany)
+- `embedding`
+- `similarTasks` (array ID podobnych zadań)
 
 ---
 
 ### PATCH /api/tasks/:id
 
-Aktualizuje istniejące zadanie (manualnie).
+Aktualizuje zadanie (częściowo).
 
 **Body:**
 
@@ -119,14 +124,26 @@ Aktualizuje istniejące zadanie (manualnie).
   "title": "Zmieniony tytuł",
   "description": "Poprawiony opis",
   "dueDate": "2025-05-10",
-  "status": "closed"
+  "status": "closed",
+  "difficulty": 4
 }
 ```
 
 **Response:**
 
-- `200 OK` – zadanie zaktualizowane
-- `404 Not Found` – zadanie nie istnieje lub nie należy do użytkownika
+```json
+{
+  "status": "success",
+  "message": "Task updated successfully",
+  "data": {
+    "_id": "...",
+    "title": "...",
+    ...
+  }
+}
+```
+
+> Backend zawsze zwraca pełny zaktualizowany obiekt `task` po zapisaniu.
 
 ---
 
@@ -143,24 +160,16 @@ Zamyka zadanie z pomocą AI.
 }
 ```
 
-**Opis:**
+**Response:** `200 OK` lub `400 Bad Request`
 
-- AI ocenia jakość `summary`
-- Jeśli `summary` < 40 znaków i `force` = `false` → błąd
-- Jeśli `force` = `true` → AI wygładza tekst mimo długości
-- Pole `sourceTaskId` nieobsługiwane w tym endpointzie
-
-**Response:**
-
-- `200 OK` – podsumowanie zaakceptowane i wygładzone przez AI
-- `400 Bad Request` – zbyt słabe `summary` bez `force`
-- `400` – brak `summary`
+> Jeśli `summary` < 40 znaków i `force = false`, operacja zostanie zablokowana.
+> Jeśli `force = true`, AI wygładza tekst mimo wszystko (`improveSummary()`).
 
 ---
 
 ### PATCH /api/tasks/:id/close
 
-Zamyka zadanie poprzez skopiowanie `summary` z innego zadania.
+Zamyka zadanie kopiując `summary` z innego zakończonego zadania.
 
 **Body:**
 
@@ -170,10 +179,7 @@ Zamyka zadanie poprzez skopiowanie `summary` z innego zadania.
 }
 ```
 
-**Response:**
-
-- `200 OK` – `summary` zostało skopiowane
-- `400` – brak `sourceTaskId` lub brak `summary` w źródle
+**Response:** `200 OK` lub `400` jeśli brak `summary` w źródle
 
 ---
 
@@ -195,18 +201,22 @@ Zwraca wszystkie zadania zalogowanego użytkownika.
     "summary": "...",
     "ownerId": "661f3...",
     "similarTasks": ["661a...", "6609..."],
-    "embedding": [0.123, 0.456, ...]
+    "embedding": [0.123, 0.456, ...],
+    "createdAt": "...",
+    "updatedAt": "..."
   }
 ]
 ```
 
+> Zadania są sortowane malejąco po `createdAt`.
+
 ---
 
-## 🔐 System OpenAI API Key
+## ⚙️ System OpenAI Key
 
 ### POST /api/system/openai-key
 
-Zapisuje zaszyfrowany klucz OpenAI w bazie danych.
+Zapisuje klucz OpenAI.
 
 **Body:**
 
@@ -216,34 +226,26 @@ Zapisuje zaszyfrowany klucz OpenAI w bazie danych.
 }
 ```
 
-**Opis:**
+**Response:** `200 OK`
 
-- Klucz jest szyfrowany AES-256-GCM
-- Przechowywany w kolekcji `apiKeys` (model `ApiKey`)
-- Obsługiwany `scope = "global"` (w przyszłości także per-user)
-- Możliwość późniejszej rotacji
-
-**Response:**
-
-- `200 OK` – klucz zapisany
+> Klucz jest szyfrowany z użyciem AES-256-GCM i zapisywany w modelu `ApiKey`. Scope = "global".
 
 ---
 
-## 📎 Uwagi ogólne
+## 🧩 Uwagi końcowe
 
-- Wszystkie endpointy z `/tasks`, `/system` wymagają tokena JWT (`Authorization: Bearer`)
-- Token zapisywany na frontendzie w `localStorage`
-- Aplikacja rozróżnia:
-  - `summary` użytkownika (oceniany przez AI)
-  - `summary` skopiowany z innego zadania
+- Wszystkie dane wejściowe są walidowane przez `express-validator`
+- Obsługa błędów odbywa się przez `utils/responseHandler.js → sendError(...)`
+- Wszystkie dane odpowiedzi są opakowane w `sendSuccess(...)`
+- Wszystkie endpointy (poza `/auth`) wymagają tokena JWT
 - Embeddingi są generowane automatycznie po utworzeniu zadania
-- Pola `similarTasks` i `embedding` nie są edytowalne przez użytkownika
+- `similarTasks` i `embedding` nie są modyfikowalne ręcznie
 
 ---
 
-## 🧠 Przyszłe rozszerzenia (planowane)
+## 🧠 Możliwe rozszerzenia
 
-- `GET /api/tasks/similar` – jawne wyszukiwanie podobnych zadań
-- `POST /api/tasks/:id/feedback` – informacja, czy podobne zadanie było pomocne
-- Obsługa `sourceTaskId` również w AI
-- Endpoint do rotacji klucza OpenAI (`/system/openai-key/rotate`)
+- `GET /api/tasks/similar` – generowanie podobnych zadań na żądanie
+- `POST /api/tasks/:id/feedback` – ocena działania AI
+- `GET /api/system/openai-key` – pobieranie klucza (dla admina)
+- `DELETE /api/tasks/:id` – usuwanie zadań (z potwierdzeniem)

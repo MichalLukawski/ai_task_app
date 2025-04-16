@@ -1,95 +1,125 @@
-# 🗺️ Roadmap projektu – AI Task App (wersja rozszerzona)
+# 📍 Roadmap projektu – AI Task App (zaktualizowana)
 
-Ten dokument przedstawia harmonogram i kolejne etapy rozwoju aplikacji AI Task App, opisując realizację funkcji backendowych, AI, embeddingów, sesji użytkownika oraz rozwoju interfejsu frontendowego. Ujęto zarówno zrealizowane funkcje, jak i planowane rozbudowy.
+Dokument opisuje chronologiczny i funkcjonalny plan rozwoju aplikacji AI Task App – systemu do zarządzania zadaniami z funkcją asystenta AI (GPT-4o), embeddingami i podsumowaniem wspieranym przez model językowy.
 
----
-
-## 🔹 Etap 0 – Fundament backendu (✅ zrealizowano)
-
-- Inicjalizacja projektu Node.js + Express
-- Konfiguracja MongoDB (lokalnie i w chmurze)
-- Autoryzacja użytkownika (JWT)
-- Middleware: autoryzacja, walidacja, obsługa błędów
-- Model `User`, operacje: rejestracja, logowanie
-- Struktura: `controllers`, `routes`, `services`, `validators`, `utils`
-- Obsługa tokena `JWT_SECRET` i szyfrowania `AES-256-GCM`
+Każdy etap zawiera podsumowanie wykonanych działań, uzasadnienie techniczne oraz opis zmian, które wpłynęły na architekturę backendu, frontend i integrację z modelem AI.
 
 ---
 
-## 🔹 Etap 1 – System zarządzania zadaniami (✅ zrealizowano)
+## Etap 1 – Projekt techniczny (ukończony)
 
-- Model `Task` zawierający: `description`, `title`, `dueDate`, `difficulty`, `summary`, `status`, `ownerId`, `similarTasks`, `embedding`
+- Analiza przypadków użycia (zarządzanie zadaniami, AI, priorytetyzacja)
+- Wybór stacku technologicznego:
+  - Backend: Node.js + Express + MongoDB
+  - Frontend: React + Vite + TailwindCSS
+  - Integracja z OpenAI (GPT-4/GPT-4o)
+- Opracowanie schematów danych:
+  - `Task`, `User`, `ApiKey`
+- Podział logiczny na `controllers`, `routes`, `services`, `middleware`
+
+---
+
+## Etap 2 – Rejestracja i logowanie (ukończony)
+
+- Uwierzytelnianie z JWT (`jsonwebtoken`)
+- Walidacja danych (`express-validator`)
+- Haszowanie haseł (`bcrypt`)
 - Endpointy:
-  - `POST /api/tasks` – ręczne tworzenie
-  - `PATCH /api/tasks/:id` – edycja
-  - `GET /api/tasks` – lista użytkownika
-- Walidatory z `express-validator`
-- Obsługa błędów przez `validate.js` + `sendError`
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+- Dodano middleware `auth.js` do ochrony tras
 
 ---
 
-## 🔹 Etap 2 – Integracja AI (✅ zrealizowano)
+## Etap 3 – Obsługa zadań (ukończony)
 
-- Połączenie z GPT-4o (function calling, `gptService.function.js`)
-- Endpoint `POST /api/tasks/ai-create`:
-  - tylko `description` jako input
-  - AI generuje: `title`, `description`, `difficulty`, `dueDate`
-- Embeddingi (`text-embedding-3-small`) generowane automatycznie
-- Przypisywanie `similarTasks` (cosine similarity ≥ 0.75)
-
----
-
-## 🔹 Etap 3 – Zamykanie zadań (✅ zrealizowano)
-
-- Endpoint `PATCH /api/tasks/:id/ai-close`:
-  - `summary` oceniany przez AI
-  - Jeśli zbyt krótki → AI odrzuca, chyba że `force = true`
-  - AI wygładza styl
-- Endpoint `PATCH /api/tasks/:id/close`:
-  - Kopiowanie `summary` z innego zadania (`sourceTaskId`)
-  - Brak użycia AI, brak własnego `summary`
-- Separacja logiki manualnej vs AI (różne endpointy)
+- Model `Task` z polami:
+  - `title`, `description`, `status`, `difficulty`, `dueDate`, `summary`, `embedding`
+- Trasy:
+  - `GET /api/tasks`
+  - `POST /api/tasks`
+  - `PATCH /api/tasks/:id`
+- Wprowadzenie `taskValidator.js` dla walidacji danych wejściowych
 
 ---
 
-## 🔹 Etap 4 – Frontend (✅ częściowo zrealizowano)
+## Etap 4 – Integracja z AI (ukończony)
 
-- React + Vite + TailwindCSS v4
-- Widoki: `WelcomePage`, `LoginPage`, `RegisterPage`, `TasksPage`
-- `AuthContext` do sesji JWT
-- `ProtectedRoute`, `Header`, dynamiczne linki
-- Wstępna integracja z API (`fetch`)
-- Planowane:
-  - `TaskFormPage` – tworzenie zadania z AI
-  - `taskService.js`, `authService.js`
+- Endpoint `POST /api/tasks/ai-create` → tworzenie zadań na podstawie opisu użytkownika
+- Funkcja `getTaskStructureFromAI(description)` – wywołanie GPT-4o z function calling
+- Dodanie `embeddingService.js`:
+  - generowanie embeddingów
+  - identyfikacja podobnych zadań (`similarTasks`)
+- Zapis `embedding`, `similarTasks` do modelu `Task`
 
 ---
 
-## 🔹 Etap 5 – Historia i semantyczne wyszukiwanie (⏳ planowane)
+## Etap 5 – Zamykanie zadania z pomocą AI (ukończony)
 
-- Endpoint `POST /api/ai/similar-tasks`
-- Możliwość oceniania: "czy podobne było pomocne"
-- Budowa osobistej bazy wiedzy użytkownika
-- Wizualizacja podobieństw w UI
-
----
-
-## 🔹 Etap 6 – Rozszerzenia i wersja produkcyjna (⏳ planowane)
-
-- Role: `admin`, `readonly`, `organization`
-- Potwierdzenie e-mail (`emailVerified`) – 🔄 planowane, niezaimplementowane
-- Zatwierdzanie rejestracji przez admina (`approvedByAdmin`) – 🔄 planowane, niezaimplementowane
-- Eksport danych (CSV/JSON)
-- Powiadomienia email, webhooki
-- Panel statystyk użytkownika
-- Backup MongoDB
-- Wersja mobilna (PWA)
+- Endpoint `PATCH /api/tasks/:id/ai-close`
+  - Walidacja `summary` (min. 40 znaków)
+  - AI ocenia jakość podsumowania (`getSummaryAssessment(...)`)
+  - AI wygładza stylistykę (`improveSummary(...)`)
+- Dodanie parametru `force = true`, aby wymusić zamknięcie mimo niskiej jakości
+- Dodanie `aiSummaryService.js` – warstwa pośrednia do logiki zamykania zadania z AI
 
 ---
 
-## 📌 Stan na dziś
+## Etap 6 – Kopiowanie podsumowania (ukończony)
 
-- Etapy 0–3: backend w pełni gotowy (AI, embeddingi, zamykanie)
-- Etap 4: frontend gotowy do pracy z sesją JWT
-- Dokumentacja projektowa i architektura ujednolicone
-- Trwa integracja interfejsu z backendem oraz refaktoryzacja usług
+- Endpoint `PATCH /api/tasks/:id/close`
+  - Kopiuje `summary` z innego zamkniętego zadania (`sourceTaskId`)
+  - Nie korzysta z AI
+- Walidacja obecności `summary` w zadaniu źródłowym
+
+---
+
+## Etap 7 – Refaktoryzacja i standaryzacja backendu (ukończony)
+
+🔧 Największa zmiana techniczna od początku projektu.
+
+- Ujednolicenie struktury katalogów i nazewnictwa:
+  - `gptService.function.js` → `gptService.js`
+  - dodanie `systemController.js`, `systemRoutes.js`
+  - dodanie `authValidator.js`
+- Wprowadzenie `utils/responseHandler.js`:
+  - `sendSuccess`, `sendError`, `handleTryCatch`
+- Wprowadzenie pełnej walidacji w każdej trasie (`validate.js`)
+- Refaktoryzacja wszystkich `controllers/` do korzystania z `try/catch` przez wrappery
+- Ustandaryzowanie odpowiedzi: każda trasa zwraca `status`, `message`, `data`
+- Wprowadzenie `setOpenAIKey()` i szyfrowania AES-256-GCM (`openaiKeyManager.js`)
+- Backend przygotowany do rozbudowy o role, zarządzanie kontem, uprawnienia
+- Rozszerzenie middleware `auth.js` – przypisywanie `email`, `role`, `id` do `req.user`
+
+---
+
+## Etap 8 – Ulepszenie UX edycji zadań (w trakcie)
+
+- Refaktoryzacja `useTaskCardState.jsx`:
+  - model `editedTask` lokalnie zarządza `difficulty`, `dueDate`
+  - UI aktualizuje się natychmiast, zapis następuje po kliknięciu/Enter
+- Zastosowanie `useApi()` jako warstwy komunikacji z backendem
+- Zmiana: brak autozapisu, zapis wyłącznie po `click` poza lub `Enter`
+- Widok `TaskCardView` oparty o `editedTask` (widoczność zmian przed zapisem)
+- Trwa testowanie synchronizacji z `onTaskUpdated(...)` i zapisów do bazy
+
+---
+
+## Etap 9 – Planowane
+
+- Edycja `title`, `description` (inline + AI poprawa stylu)
+- Wyszukiwanie z użyciem embeddingów (`similarity search`)
+- Eksport podsumowań (`summary`) do PDF
+- Logowanie działań użytkownika (audyt)
+- Kontrola ról (`admin`, `user`)
+- Interfejs konfiguracji AI (model, temperatura, tokeny)
+- Pełna dokumentacja dla zespołu (markdown + generator)
+
+---
+
+## 📘 Dokumentacja wspierająca
+
+- `controllers.md`, `routes.md`, `services.md`, `validators.md`, `utils.md`
+- `api_spec.md` – aktualna specyfikacja endpointów
+- `project_overview.md`, `task_flow.md`, `auth_flow.md`
+- `CHANGELOG.md` – zmiany wersji backendu

@@ -1,22 +1,32 @@
-# 📘 Dokumentacja kontrolerów – AI Task App (aktualna wersja)
+# 📘 Dokumentacja kontrolerów – AI Task App (zaktualizowana)
 
-Dokumentacja opisuje funkcje eksportowane przez kontrolery backendu. Każdy kontroler odpowiada za realizację logiki konkretnego modułu (autoryzacja, zadania, integracja z AI, system).
+Dokumentacja opisuje wszystkie funkcje eksportowane przez kontrolery backendu aplikacji **AI Task App**. Każdy kontroler odpowiada za konkretny obszar funkcjonalny systemu: autoryzację użytkowników, zarządzanie zadaniami, integrację z AI oraz konfigurację systemową.
+
+Wszystkie funkcje kontrolerów zwracają ustandaryzowane odpowiedzi w formacie:
+
+```json
+{
+  "status": "success" | "error",
+  "message": "opis komunikatu",
+  "data": {} // opcjonalnie
+}
+```
+
+Obsługa błędów i odpowiedzi realizowana jest przez `utils/responseHandler.js`.
 
 ---
 
 ## 🔐 Kontroler: `authController.js`
 
-### POST /api/auth/register
+### POST `/api/auth/register`
 
 Rejestruje nowego użytkownika w systemie.
 
-- Wymagane pola: `email`, `password`
-- Nowy użytkownik nie jest aktywny dopóki:
-  - nie potwierdzi adresu e-mail (jeśli system aktywny)
-  - nie zostanie zatwierdzony przez administratora (`approvedByAdmin: true`)
-- Hasło jest haszowane (bcrypt)
+- **Wymagane pola**: `email`, `password`
+- Hasło jest haszowane z użyciem `bcrypt`
+- Domyślnie nie ma potwierdzania e-maila ani aktywacji konta (można dodać później)
 
----
+Walidacja pól odbywa się przez `validators/authValidator.js`.
 
 ### POST /api/auth/login
 

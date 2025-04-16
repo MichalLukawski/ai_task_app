@@ -1,141 +1,140 @@
-# 🔐 Dokumentacja – Autoryzacja i przepływ sesji (Auth Flow) w AI Task App
+# 🔐 Autoryzacja i uwierzytelnianie – AI Task App (zaktualizowana wersja)
 
-Niniejszy dokument opisuje pełen przepływ autoryzacji użytkownika w aplikacji AI Task App – od rejestracji po zakończenie sesji. Zawiera opis logiki działania logowania, rejestracji, przechowywania tokena, zabezpieczania tras oraz integracji z `AuthContext`.
-
----
-
-## 🔁 Przegląd ogólny
-
-1. Użytkownik rejestruje się przez formularz (`/register`)
-2. Backend tworzy konto, ale:
-   - Użytkownik wymaga **zatwierdzenia przez administratora**
-   - (Opcjonalnie) także potwierdzenia e-mail
-3. Po zatwierdzeniu – użytkownik loguje się przez `/login`
-4. Backend zwraca token JWT
-5. Token zapisywany jest w `localStorage`
-6. `AuthContext` przywraca sesję przy każdym uruchomieniu aplikacji
-7. Zalogowany użytkownik uzyskuje dostęp do tras chronionych (`/tasks`)
-8. `Logout` czyści token i przekierowuje do `/`
+Dokument ten przedstawia pełny przepływ rejestracji, logowania i uwierzytelniania użytkownika w aplikacji AI Task App. Opisuje architekturę backendu i frontendowego zarządzania sesją, wykorzystanie tokenów JWT, rolę middleware oraz planowane rozszerzenia bezpieczeństwa.
 
 ---
 
-## ✅ Rejestracja
+## 🧾 Rejestracja (`POST /api/auth/register`)
 
-### 🔹 Formularz – `RegisterPage.jsx`
+### Proces:
 
-- Pola: `email`, `password`, `confirmPassword`
-- Wysyła `POST /api/auth/register`
+1. Użytkownik wypełnia formularz rejestracyjny z polami:
+   - `email`
+   - `password` (min. 6 znaków)
+2. Frontend przesyła dane do endpointa `POST /api/auth/register`
+3. Backend:
+   - Waliduje dane (`authValidator.js → validateRegisterInput`)
+   - Sprawdza, czy użytkownik o takim e-mailu już istnieje
+   - Haszuje hasło (`bcrypt`)
+   - Tworzy nowy dokument `User`
+4. Odpowiedź `201 Created` + komunikat `User registered successfully`
 
-### 🔹 Backend
+### Uwaga:
 
-- Tworzy użytkownika w bazie
-- Ustawia `approvedByAdmin: false`, `emailVerified: false`
-- Użytkownik nie może się zalogować do czasu zatwierdzenia (etap manualny)
-
-### 🔹 Planowane
-
-- Weryfikacja e-mail poprzez token (`/verify-email/:token`)
-- Interfejs administratora do akceptowania kont
-
----
-
-## 🔐 Logowanie
-
-### 🔹 Formularz – `LoginPage.jsx`
-
-- Pola: `email`, `password`
-- Wysyła `POST /api/auth/login`
-
-### 🔹 Backend
-
-- Sprawdza `email` i `password`
-- Sprawdza `approvedByAdmin === true`
-- Zwraca token JWT
-
-### 🔹 Frontend
-
-- `authService.login()` zapisuje token
-- `AuthContext.login(token)` aktualizuje stan globalny
-- Przekierowuje do `/tasks`
+- Obecna wersja nie zawiera systemu aktywacji konta ani potwierdzania adresu e-mail – są one zaplanowane jako rozszerzenie.
+- Konta są od razu aktywne po rejestracji.
 
 ---
 
-## 🧠 Przechowywanie sesji
+## 🔑 Logowanie (`POST /api/auth/login`)
 
-### 🔹 Token
+### Proces:
 
-- Zapisywany w `localStorage` jako `"token"`
+1. Użytkownik wprowadza `email` i `password`
+2. Frontend wysyła żądanie `POST /api/auth/login`
+3. Backend:
+   - Weryfikuje dane (`authValidator.js → validateLoginInput`)
+   - Szuka użytkownika w bazie (`User.findOne`)
+   - Sprawdza hasło (`bcrypt.compare(...)`)
+   - Generuje token JWT:
+     - Payload: `{ id: user._id }`
+     - Ważność: 7 dni
+   - Zwraca `token` w polu `data`
 
-### 🔹 `AuthContext.jsx`
+**Odpowiedź:**
 
-- W `useEffect()` przy uruchomieniu odczytuje token
-- Jeśli istnieje → ustawia `token`, `isAuthenticated = true`
-- Jeśli nie istnieje → `isAuthenticated = false`
-
-### 🔹 Flaga `isLoading`
-
-- Zapobiega wyświetlaniu komponentów chronionych, zanim sesja zostanie zainicjalizowana
-- W `ProtectedRoute`: jeśli `isLoading`, zwraca `null`
-
----
-
-## 🔐 Ochrona tras
-
-### 🔹 `ProtectedRoute.jsx`
-
-- Jeśli `!isAuthenticated` → `<Navigate to="/login" />`
-- W przeciwnym razie renderuje dzieci (`children`)
-- Chroni m.in. trasę `/tasks`
-
----
-
-## 🚪 Wylogowanie
-
-### 🔹 `logout()` w `AuthContext`
-
-- Usuwa token z `localStorage`
-- Resetuje stan `token`, `user`, `isAuthenticated`
-- Zwykle połączone z przekierowaniem na `/`
+```json
+{
+  "status": "success",
+  "message": "Login successful",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+```
 
 ---
 
-## 🧩 Współpraca między warstwami
+## 🧠 Uwierzytelnianie – middleware `auth.js`
 
-| Element              | Rola                                                 |
-| -------------------- | ---------------------------------------------------- |
-| `AuthContext`        | zarządza tokenem, sesją                              |
-| `authService.js`     | wykonuje żądania logowania/rejestracji               |
-| `Header.jsx`         | pokazuje `Login`/`Register` lub `Logout`/`Dashboard` |
-| `ProtectedRoute.jsx` | chroni dostęp do tras                                |
+### Działanie:
 
----
+1. Sprawdza obecność nagłówka `Authorization: Bearer <token>`
+2. Weryfikuje JWT (secret z `.env`)
+3. Pobiera użytkownika z bazy (`User.findById`)
+4. Jeśli użytkownik istnieje, przypisuje do `req.user`:
 
-## 🧠 Token JWT
+   - `id`
+   - `email`
+   - `role` (w przyszłości)
 
-- Generowany przez backend (`jsonwebtoken`)
-- Zawiera `userId`
-- Przechowywany po stronie klienta
-- Przesyłany do backendu w nagłówku:
-  ```
-  Authorization: Bearer <JWT>
-  ```
+5. Jeśli token jest nieprawidłowy lub użytkownik nie istnieje:
+   - Zwraca błąd `401 Unauthorized`
+
+> Middleware `auth` używany jest w każdej trasie chronionej (np. `/api/tasks`, `/api/system/openai-key`)
 
 ---
 
-## 🔧 Planowane rozszerzenia
+## 🧩 Zarządzanie sesją – frontend (`AuthContext`)
 
-- Automatyczne wygaszanie sesji (timeout)
-- Obsługa `refresh token`
+### Przechowywanie tokena:
+
+- Token zapisywany jest w `localStorage` po udanym logowaniu
+- `AuthContext` udostępnia funkcje:
+  - `login(token)` – zapis tokena
+  - `logout()` – usuwa token
+  - `isAuthenticated` – bool na podstawie obecności tokena
+  - `user`, `setUser()` – miejsce na przyszłą obsługę danych użytkownika
+
+### Automatyczne uwierzytelnienie:
+
+- `AuthProvider` przy starcie sprawdza `localStorage.getItem("token")`
+- Jeśli token istnieje – ustawia `isAuthenticated = true`
+- Możliwość walidacji tokena przez `GET /api/auth/me` (do rozważenia)
+
+---
+
+## 📦 Walidacja
+
+### `authValidator.js` zawiera:
+
+- `validateRegisterInput`
+
+  - `email` – wymagany, poprawny format
+  - `password` – min. 6 znaków
+
+- `validateLoginInput`
+  - `email` – wymagany, poprawny format
+  - `password` – wymagany
+
+Walidacja wspierana przez middleware `validate.js`, który agreguje błędy i zwraca je w jednolitym formacie:
+
+```json
+{
+  "status": "error",
+  "message": "Email is required; Password must be at least 6 characters",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+---
+
+## 🛡️ Planowane rozszerzenia autoryzacji
+
 - Role użytkowników (`admin`, `user`)
-- Dekodowanie JWT po stronie klienta (`jwt-decode`)
-- Zmiana hasła, reset hasła (z tokenem)
+- Middleware `requireRole("admin")`
+- Aktywacja konta przez e-mail
+- Limit logowań / captcha przy błędach
+- Możliwość zmiany hasła
+- Endpoint `GET /api/auth/me` do walidacji tokena
+- Przechowywanie sesji w cookies `HttpOnly` (dla bezpieczeństwa)
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `context.md` – struktura i logika `AuthContext`
-- `components.md` – `Header`, `ProtectedRoute`
-- `pages.md` – `LoginPage`, `RegisterPage`
-- `services_PLANNED.md` – metody `login()`, `register()`
-- `routing.md` – dostępność tras i ochrona
+- `routes.md` – `/api/auth/*`
+- `controllers.md` – `authController.js`
+- `validators.md` – `authValidator.js`
+- `middleware.md` – `auth.js`, `validate.js`
+- `project_overview.md`, `project_roadmap.md`

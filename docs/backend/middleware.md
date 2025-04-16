@@ -1,6 +1,6 @@
-# 🧱 Dokumentacja middleware – AI Task App (aktualna wersja)
+# 🧱 Dokumentacja middleware – AI Task App (zaktualizowana)
 
-Middleware to funkcje pośredniczące w przetwarzaniu żądań HTTP, odpowiedzialne za autoryzację, walidację oraz globalną obsługę błędów.
+Middleware to funkcje pośredniczące w przetwarzaniu żądań HTTP. W aplikacji AI Task App odpowiadają one za uwierzytelnianie, walidację danych wejściowych, globalną obsługę błędów oraz przekazywanie logicznych wyjątków do jednolitego systemu odpowiedzi.
 
 ---
 
@@ -8,14 +8,17 @@ Middleware to funkcje pośredniczące w przetwarzaniu żądań HTTP, odpowiedzia
 
 ### Opis:
 
-Middleware uwierzytelniający użytkownika na podstawie nagłówka `Authorization` z tokenem JWT.
+Middleware uwierzytelniający użytkownika na podstawie tokena JWT przekazywanego w nagłówku `Authorization`.
 
 ### Działanie:
 
 - Wymaga nagłówka `Authorization: Bearer <token>`
-- Weryfikuje JWT przy użyciu `process.env.JWT_SECRET`
-- W przypadku powodzenia dodaje `req.user = { id }` do obiektu `request`
-- W przypadku niepowodzenia zwraca błąd `401 Unauthorized`
+- Weryfikuje token JWT przy użyciu `process.env.JWT_SECRET`
+- Pobiera użytkownika z bazy (`User.findById(...)`)
+- Jeśli użytkownik istnieje:
+  - Przypisuje do `req.user`: `id`, `email`, `role`
+- Jeśli użytkownik nie istnieje lub token jest niepoprawny:
+  - Zwraca błąd `401 Unauthorized`
 
 ### Przykład odpowiedzi błędnej:
 
@@ -27,40 +30,35 @@ Middleware uwierzytelniający użytkownika na podstawie nagłówka `Authorizatio
 }
 ```
 
+> ℹ️ To middleware jest stosowane we wszystkich trasach chronionych (np. `/api/tasks`, `/api/system/*`).
+
 ---
 
 ## ✅ Plik: `middleware/validate.js`
 
 ### Opis:
 
-Middleware walidacyjny – obsługuje wyniki walidatorów z `express-validator`.
+Middleware obsługujący wynik walidacji z `express-validator`.
 
 ### Działanie:
 
 - Wywołuje `validationResult(req)`
 - Jeśli są błędy:
-  - Agreguje je
-  - Wysyła odpowiedź z `sendError` (`400 Bad Request`)
-- Jeśli nie ma błędów → przekazuje dalej do kontrolera
+  - Mapuje je do pojedynczego komunikatu tekstowego
+  - Zwraca `400 Bad Request` z kodem `VALIDATION_ERROR`
+- Jeśli brak błędów → przekazuje żądanie do następnego handlera
 
 ### Przykład odpowiedzi błędnej:
 
 ```json
 {
   "status": "error",
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "description",
-      "message": "Description is required"
-    },
-    {
-      "field": "status",
-      "message": "Status must be either 'open' or 'closed'"
-    }
-  ]
+  "message": "Email is required; Password must be at least 6 characters long",
+  "code": "VALIDATION_ERROR"
 }
 ```
+
+> ℹ️ Middleware wykorzystywany w połączeniu z `authValidator.js` i `taskValidator.js`.
 
 ---
 
@@ -68,13 +66,13 @@ Middleware walidacyjny – obsługuje wyniki walidatorów z `express-validator`.
 
 ### Opis:
 
-Globalny middleware przechwytujący błędy nieobsłużone w innych miejscach.
+Globalny middleware przechwytujący błędy nieobsłużone przez kontrolery ani routery.
 
 ### Działanie:
 
-- Obsługuje błędy runtime (`try/catch`)
-- Reaguje na `res.headersSent`
-- Zwraca `500 Internal Server Error` jeśli nie podano kodu
+- Obsługuje błędy typu runtime (`try/catch`)
+- Sprawdza `res.headersSent` – jeśli odpowiedź została wysłana, przekazuje błąd dalej
+- W przypadku nieoczekiwanego błędu – zwraca `500 Internal Server Error`
 
 ### Przykład:
 
@@ -84,6 +82,8 @@ Globalny middleware przechwytujący błędy nieobsłużone w innych miejscach.
   "message": "Internal server error"
 }
 ```
+
+> ℹ️ Używany w konfiguracji głównej aplikacji Express jako ostatni middleware (`app.use(errorHandler)`).
 
 ---
 
@@ -97,14 +97,28 @@ router.patch(
   auth,
   validateCloseTaskWithAI,
   validate,
-  closeTaskWithAI
+  handleTryCatch(closeTaskWithAI)
 );
 ```
+
+- `auth` → weryfikuje tożsamość
+- `validateCloseTaskWithAI` → przygotowuje reguły walidacji
+- `validate` → sprawdza poprawność danych
+- `handleTryCatch(...)` → zapewnia przechwycenie błędów async
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `validators.md` – dostarcza walidatory
-- `utils/responseHandler.js` – `sendError`, `sendSuccess`
-- `controllers/` – wykorzystuje `auth`, `validate`
+- `validators.md` – reguły walidacji (`express-validator`)
+- `utils/responseHandler.js` – `sendError`, `sendSuccess`, `handleTryCatch`
+- `controllers/` – logika główna wykorzystująca middleware
+- `routes/` – miejsca wywołań middleware w trasach
+
+---
+
+## 🔄 Możliwe rozszerzenia
+
+- Dodanie `middleware/requireAdmin.js` do kontroli ról
+- Middleware `logger.js` do rejestrowania zapytań i odpowiedzi
+- Obsługa limitów zapytań (`rate-limiting`) na poziomie middleware

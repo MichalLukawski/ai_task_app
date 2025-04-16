@@ -1,27 +1,30 @@
-# 🛠️ Dokumentacja utils – AI Task App (aktualna wersja)
+# 🛠️ Dokumentacja utils – AI Task App (zaktualizowana)
 
 ---
 
 ## 📄 Plik: `utils/responseHandler.js`
 
+Moduł odpowiedzialny za jednolitą strukturę odpowiedzi API oraz przechwytywanie błędów `async/await` w kontrolerach. Stosowany we wszystkich głównych kontrolerach i trasach. Współpracuje z middleware takimi jak `auth.js`, `validate.js` oraz `errorHandler.js`.
+
+---
+
 ### `sendSuccess(res, message, data, status = 200)`
 
-- **Opis:** Wysyła jednolitą odpowiedź typu sukces (`status: "success"`).
+- **Opis:** Wysyła odpowiedź JSON z komunikatem sukcesu.
 - **Parametry:**
   - `res` – obiekt odpowiedzi Express
-  - `message` – tekstowy komunikat, np. `"Login successful"`
-  - `data` – dane opcjonalne (np. `token`, `task`, `user`)
-  - `status` – HTTP status code (domyślnie 200)
+  - `message` – tekst komunikatu (np. `"Task updated successfully"`)
+  - `data` – dane użytkowe zwracane do klienta (może być `null`)
+  - `status` – kod HTTP (domyślnie 200)
 
 **Przykład odpowiedzi:**
 
 ```json
 {
   "status": "success",
-  "message": "Task created successfully",
+  "message": "Login successful",
   "data": {
-    "title": "Błąd z JWT",
-    "difficulty": 3
+    "token": "eyJhbGciOiJIUzI1NiIs..."
   }
 }
 ```
@@ -30,38 +33,70 @@
 
 ### `sendError(res, message, status = 500, code = null)`
 
-- **Opis:** Wysyła jednolitą odpowiedź błędu (`status: "error"`).
+- **Opis:** Wysyła odpowiedź JSON informującą o błędzie.
 - **Parametry:**
   - `res` – obiekt odpowiedzi Express
-  - `message` – tekst błędu, np. `"Invalid token"`
-  - `status` – kod błędu HTTP, np. `400`, `401`, `500`
-  - `code` – kod błędu wewnętrznego (opcjonalnie), np. `INVALID_TOKEN`, `VALIDATION_FAILED`
+  - `message` – opis błędu
+  - `status` – kod HTTP (np. 400, 401, 500)
+  - `code` – (opcjonalnie) własny kod błędu aplikacji (np. `VALIDATION_ERROR`, `NO_TOKEN`)
 
 **Przykład odpowiedzi:**
 
 ```json
 {
   "status": "error",
-  "message": "Invalid token",
+  "message": "Invalid or expired token",
   "code": "INVALID_TOKEN"
 }
 ```
 
 ---
 
-## 📁 Przyszłe rozszerzenia `utils/`
+### `handleTryCatch(asyncFn)`
 
-Planowane są dodatkowe moduły pomocnicze, m.in.:
+- **Opis:** Wrapper dla funkcji asynchronicznych używany w routerach do obsługi błędów.
+- **Zastosowanie:** Zamiast pisać `try/catch` w każdym kontrolerze – przekazujemy funkcję do `handleTryCatch`.
+- **Zwraca:** Nową funkcję `(req, res, next)` z automatycznym przechwytywaniem wyjątków.
 
-- funkcje do walidacji ról (`isAdmin`, `isTaskOwner`)
-- formatowanie dat (`formatDate`)
-- generatory tokenów do aktywacji konta / weryfikacji e-mail
-- narzędzia do debugowania danych (np. `logObjectDeep`)
+**Przykład użycia w trasie:**
+
+```js
+router.patch(
+  "/tasks/:id",
+  auth,
+  validateUpdateTaskInput,
+  validate,
+  handleTryCatch(updateTask)
+);
+```
+
+- Jeśli `updateTask` rzuci błąd → zostanie on automatycznie złapany i przekazany do `sendError`.
+
+---
+
+## 🔁 Wewnętrzne konwencje
+
+- Wszystkie kontrolery używają `sendSuccess`, `sendError`
+- `sendError` obsługuje błędy walidacji, autoryzacji i błędy wewnętrzne
+- `handleTryCatch` eliminuje konieczność `try/catch` w `authController`, `taskController`, `systemController`
+
+---
+
+## 📁 Planowane i możliwe rozszerzenia `utils/`
+
+Moduł `utils/` będzie rozszerzany o następujące narzędzia:
+
+- `formatDate(date)` – ustandaryzowane formatowanie dat (np. `YYYY-MM-DD`)
+- `isTaskOwner(req, task)` – sprawdzenie, czy użytkownik jest właścicielem zadania
+- `generateToken(length)` – generator tokenów (np. do aktywacji e-mail)
+- `parseAIResponse(tool_call)` – ekstrakcja argumentów z `function_calling`
+- `logObjectDeep(obj)` – debugowanie zagnieżdżonych struktur obiektów
 
 ---
 
 ## 📄 Dokumentacja powiązana
 
-- `middleware.md` – obsługa błędów (np. `errorHandler`)
-- `controllers.md` – użycie `sendSuccess` i `sendError` w odpowiedziach
-- `validators.md` – współpraca z `sendError` dla walidacji danych
+- `controllers.md` – zastosowanie `sendSuccess`, `sendError`
+- `routes.md` – zastosowanie `handleTryCatch` w trasach
+- `middleware.md` – jak `sendError` współpracuje z `validate.js`, `auth.js`
+- `services.md` – przechwytywanie błędów w integracji z OpenAI (`try/catch` → `sendError`)

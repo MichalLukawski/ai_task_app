@@ -1,169 +1,138 @@
-# ✅ Dokumentacja – Przepływ tworzenia i zarządzania zadaniami (AI Task App)
+# 📊 Task Flow – AI Task App (zaktualizowana wersja)
 
-Ten dokument przedstawia pełny przebieg tworzenia, przeglądania, edycji i zamykania zadań w aplikacji AI Task App. Opisuje integrację pomiędzy komponentami frontendowymi, hookami, usługami API i backendem opartym o AI. Dokument służy jako przewodnik po całym cyklu życia zadania – od opisu użytkownika do zakończenia zadania i ewaluacji przez model GPT.
+Niniejszy dokument przedstawia pełny przepływ tworzenia, edytowania, zamykania i obsługi zadań (tasks) w aplikacji AI Task App. Obejmuje zarówno procesy wykonywane ręcznie przez użytkownika, jak i działania zautomatyzowane lub wspomagane przez sztuczną inteligencję (GPT-4o).
 
----
-
-## 🔁 Przegląd cyklu życia zadania
-
-1. **Użytkownik tworzy zadanie** przy użyciu formularza AI (`CreateTaskForm`)
-2. **Frontend** wysyła opis zadania do endpointu AI (`/api/tasks/ai-create`)
-3. **Backend** generuje `title`, `difficulty`, `dueDate` i zapisuje zadanie
-4. **Frontend** aktualizuje listę – pojawia się nowa `TaskCard`
-5. **Użytkownik edytuje zadanie** (np. termin, opis) – karta przechodzi w tryb `edit`
-6. **Użytkownik zamyka zadanie**:
-   - manualnie (z pomocą innego zadania)
-   - lub z pomocą AI (na podstawie `summary`)
-7. **AI ocenia podsumowanie** i zatwierdza zadanie jako zakończone
-8. **Zadanie** trafia do statusu `isCompleted = true`
+Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy zadań w kontekście danych, interakcji z API oraz komunikacji frontend ↔ backend.
 
 ---
 
-## 🧾 Tworzenie zadania z pomocą AI
+## 1️⃣ Tworzenie zadania ręcznego (`POST /api/tasks`)
 
-### 💬 Formularz
+### Etapy:
 
-- Komponent: `CreateTaskForm`
-- Użytkownik podaje **opis** zadania (`description`)
-- Nie wybiera tytułu, trudności ani terminu – są generowane
+1. Użytkownik wypełnia formularz `CreateTaskForm`
+2. Pola obowiązkowe: `description` (min. 5 znaków)
+3. Dodatkowe pola: `title`, `dueDate`, `difficulty`
+4. Walidacja danych po stronie frontend i backend (`taskValidator.js`)
+5. Wysłanie żądania POST
+6. Backend zapisuje zadanie w MongoDB (`ownerId` = `req.user.id`)
+7. Backend zwraca pełny obiekt `task`
 
-### 📡 Żądanie HTTP
+### Efekt:
 
-```http
-POST /api/tasks/ai-create
-Content-Type: application/json
-Authorization: Bearer <token>
-
-{
-  "description": "Napisz parser CSV w Node.js"
-}
-```
-
-### 🧠 Backend
-
-- Controller `createWithAI`:
-  - wysyła prompt do GPT (modele OpenAI lub lokalne)
-  - generuje `title`, `difficulty`, `dueDate`
-  - tworzy nowy dokument `Task` w MongoDB
-
-### ✅ Odpowiedź
-
-```json
-{
-  "title": "Parser CSV w Node.js",
-  "description": "Napisz parser CSV w Node.js",
-  "difficulty": 3,
-  "dueDate": "2025-04-16"
-}
-```
-
-### 🔄 Frontend
-
-- Komponent `CreateTaskForm` wywołuje `setTasks([...tasks, newTask])`
-- Nowa karta pojawia się w `TaskList`
+- Zadanie pojawia się w liście na dashboardzie
+- Nie ma wygenerowanego `embedding` ani `similarTasks`
 
 ---
 
-## 🗂️ Wyświetlanie zadania (`TaskCard`)
+## 2️⃣ Tworzenie zadania z pomocą AI (`POST /api/tasks/ai-create`)
 
-- Komponent `DashboardPage` renderuje `TaskList`
-- `TaskList` renderuje wiele `TaskCard` (przekazując dane `task`)
-- `TaskCard` pokazuje:
-  - `title`, `description`
-  - `difficulty` (gwiazdki: `DifficultyStars`)
-  - `dueDate` (pasek: `DueDateProgress`)
-  - status: otwarte/zamknięte
-  - akcje: Edytuj / Zakończ
+### Etapy:
 
----
-
-## ✏️ Edycja zadania
-
-### 🔀 Mechanizm
-
-- Po kliknięciu „Edytuj” → `TaskCard` przełącza się w tryb `edit`
-- Widok zmienia się z `TaskCardView` na `TaskCardEdit`
-- Hook `useTaskCardState` zarządza przełączaniem i lokalnym stanem edycji
-
-### 🧩 Użytkownik może:
-
-- zmienić `dueDate` przez `DueDateEditor`
-- zmienić `difficulty` (select lub kliknięcie w gwiazdki)
-- zapisać lub anulować zmiany
-
-### 🔁 Zapis zmian
-
-```http
-PATCH /api/tasks/:id
-Authorization: Bearer <token>
-
-{
-  "difficulty": 2,
-  "dueDate": "2025-04-20"
-}
-```
+1. Użytkownik wpisuje naturalny opis zadania (np. "Aplikacja mobilna zamyka się przy starcie")
+2. Frontend wysyła POST do `/api/tasks/ai-create`
+3. Backend uruchamia funkcję `getTaskStructureFromAI(description)`:
+   - Wywołuje GPT-4o z `function_calling`
+   - Otrzymuje: `title`, `description`, `difficulty`, `dueDate`
+4. Tworzony jest task z tymi danymi
+5. Backend wykonuje `generateAndAttachEmbedding(taskId)`:
+   - Generuje embedding (OpenAI: `text-embedding-3-small`)
+   - Porównuje z zamkniętymi zadaniami
+   - Przypisuje `similarTasks` do obiektu `task`
+6. Zadanie jest zapisywane i zwracane
 
 ---
 
-## 🏁 Zamykanie zadania
+## 3️⃣ Edycja zadania (`PATCH /api/tasks/:id`)
 
-### 🧠 Opcja 1: z pomocą AI
+### Od strony frontend (kluczowe):
 
-- W `TaskCardView` użytkownik klika „Zakończ z pomocą AI”
-- Wpisuje `summary` – krótkie podsumowanie rozwiązania zadania
+1. Komponent `TaskCard` zawiera `useTaskCardState(task, onTaskUpdated)`
+2. Po kliknięciu w kartę aktywowany jest tryb edycji
+3. Użytkownik może zmienić:
+   - `difficulty` (komponent: `DifficultySelector`)
+   - `dueDate` (komponent: `DueDateEditor`)
+4. Wartości edytowane lokalnie w `editedTask` (`useState`)
+5. Widok aktualizuje się od razu na podstawie `editedTask`
+6. Zapis następuje **dopiero po:**
+   - kliknięciu poza kartę (ale nie w pole edytowalne)
+   - kliknięciu ponownym w kartę
+   - naciśnięciu `Enter`
+7. Funkcja `save()` wywołuje `PATCH /api/tasks/:id`
+8. Odpowiedź zawiera pełny, zaktualizowany obiekt `task`
+9. `onTaskUpdated(task)` aktualizuje listę zadań w `DashboardPage`
 
-```http
-PATCH /api/tasks/:id/ai-close
+### Od strony backend:
 
-{
-  "summary": "Zaimplementowano parser z walidacją pól CSV"
-}
-```
-
-- Backend:
-  - analizuje `summary` (funkcja `getSummaryAssessment`)
-  - jeśli poprawne – ustawia `isCompleted = true`
-
-### 📋 Opcja 2: manualnie (na podstawie innego zadania)
-
-- Użytkownik wybiera inne zadanie jako źródło (`sourceTaskId`)
-- System kopiuje `summary` z tego zadania
-
-```http
-PATCH /api/tasks/:id/close
-
-{
-  "sourceTaskId": "<taskId>"
-}
-```
+- Dane są aktualizowane z użyciem `findOneAndUpdate`
+- Walidacja przez `validateUpdateTaskInput`
+- Odpowiedź standaryzowana: `sendSuccess(...)` z pełnym taskiem
 
 ---
 
-## 🔍 Podobne zadania (`similarTasks`)
+## 4️⃣ Zamykanie zadania z pomocą AI (`PATCH /api/tasks/:id/ai-close`)
 
-- W trakcie tworzenia zadania backend generuje embedding
-- Pole `similarTasks` zawiera ID zadań podobnych tematycznie
-- W przyszłości może być używane do:
-  - podpowiedzi użytkownikowi
-  - łatwiejszego zamykania zadań (duplikaty)
+### Scenariusz:
 
----
+- Użytkownik wpisuje podsumowanie (`summary`) wykonanych działań
+- Może zaznaczyć `force`, jeśli chce wymusić zamknięcie mimo niedoskonałości tekstu
 
-## 📌 Podsumowanie
+### Backend:
 
-| Etap                     | Komponenty frontend | Endpoint backend            | AI               |
-|--------------------------|---------------------|------------------------------|------------------|
-| Tworzenie                | `CreateTaskForm`    | `POST /tasks/ai-create`      | GPT generuje dane|
-| Wyświetlanie             | `TaskCard`          | `GET /tasks`                 | ❌                |
-| Edycja                   | `TaskCardEdit`      | `PATCH /tasks/:id`           | ❌                |
-| Zamykanie z AI           | `TaskCardView`      | `PATCH /tasks/:id/ai-close`  | GPT ocenia        |
-| Zamykanie manualne       | `TaskCardView`      | `PATCH /tasks/:id/close`     | ❌                |
+1. Wywołanie `processTaskClosure({ task, userSummary, force })`
+2. Funkcja uruchamia:
+   - `getSummaryAssessment(...)` – GPT-4o ocenia jakość
+   - `improveSummary(...)` – wygładza styl
+3. Jeśli tekst zaakceptowany → zapis jako `task.summary`, `status = closed`, `closedAt = now`
+4. Zwracany pełen `task`
 
 ---
 
-## 📄 Dokumentacja powiązana
+## 5️⃣ Zamykanie zadania przez kopiowanie podsumowania (`PATCH /api/tasks/:id/close`)
 
-- `components.md` – komponenty UI zadań
-- `hooks.md` – logika zarządzania stanem `TaskCard`
-- `api_spec.md` – opis endpointów związanych z zadaniami
-- `db_schema.md` – pola modelu `Task` (`difficulty`, `dueDate`, `summary`)
+### Scenariusz:
+
+- Użytkownik wybiera zakończone zadanie z `summary`
+- Podaje `sourceTaskId`
+
+### Backend:
+
+1. Sprawdza, czy `sourceTaskId` istnieje i zawiera `summary`
+2. Kopiuje `summary`, ustawia `status = closed`, `closedAt = now`
+3. Zwraca pełny task
+
+---
+
+## 6️⃣ Odświeżanie listy zadań (`GET /api/tasks`)
+
+- Zadania pobierane przy pierwszym załadowaniu dashboardu
+- Sortowane malejąco po `createdAt`
+- Frontend zapisuje wynik w stanie lokalnym
+- `onTaskUpdated` aktualizuje konkretne zadanie po edycji
+
+---
+
+## 7️⃣ Walidacja i bezpieczeństwo
+
+- Wszystkie trasy `/tasks/*` zabezpieczone przez `auth.js`
+- Wszystkie dane wejściowe walidowane przez `taskValidator.js`
+- W przypadku błędów zwracany `400` z `VALIDATION_ERROR`
+
+---
+
+## 🔄 Zależności komponentów frontend
+
+- `TaskCard` → kontroluje tryb edycji i kliknięcia
+- `TaskCardEdit` → pola: `dueDate`, `difficulty`
+- `useTaskCardState` → zarządza `editedTask`, `save()`, `setIsEditing`
+- `TaskCardView` → pokazuje wartości z `editedTask` nawet w trybie readonly
+
+---
+
+## 📄 Dokumenty powiązane
+
+- `api_spec.md` – schematy danych i struktur odpowiedzi
+- `controllers.md` – logika tworzenia i zamykania zadań
+- `routes.md` – dostępność tras
+- `validators.md` – reguły sprawdzające dane wejściowe
+- `project_overview.md`, `backend_overview.md` – warstwa architektury

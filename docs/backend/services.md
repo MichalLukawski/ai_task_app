@@ -1,150 +1,139 @@
-# 🧠 Dokumentacja – AI Services
+# 🧠 Dokumentacja – AI Services (zaktualizowana)
 
-Dokument opisuje najważniejsze moduły znajdujące się w katalogu `services/`, które odpowiadają za integrację AI z backendem aplikacji AI Task App.
+Dokument opisuje wszystkie moduły znajdujące się w katalogu `services/`, które odpowiadają za integrację z OpenAI, przetwarzanie embeddingów, zamykanie zadań przy wsparciu AI oraz bezpieczne zarządzanie kluczem API. Każdy z modułów ma wyraźnie wydzieloną odpowiedzialność i spełnia jedną główną funkcję domenową.
 
 ---
 
-## 📁 `services/gptService.function.js`
+## 📁 `services/gptService.js`
 
-Plik zawiera funkcje odpowiedzialne za komunikację z OpenAI GPT-4o z użyciem **function calling**.
+Moduł odpowiedzialny za interakcję z modelem OpenAI GPT-4o. Zawiera niskopoziomowe funkcje wykorzystujące mechanizm **function calling**.
 
-### 🔧 Funkcje:
+### 🔧 Eksportowane funkcje:
 
 #### `getTaskStructureFromAI(description)`
 
-- **Zadanie:** generuje strukturę nowego zadania na podstawie opisu użytkownika
-- **Model:** `gpt-4o`
-- **Funkcja GPT:** `create_task`
-- **Zwraca:**
-  - `title` – krótki tytuł
-  - `description` – zoptymalizowany opis
-  - `dueDate?` – tylko jeśli wykryty w opisie
-  - `difficulty` – liczba od 1 do 5
+- Generuje strukturę nowego zadania na podstawie opisu użytkownika
+- Wykorzystuje `function_calling` z nazwą `create_task`
+- Zwracane dane:
+  - `title`: tytuł zadania
+  - `description`: zoptymalizowany opis
+  - `difficulty`: liczba 1–5
+  - `dueDate` (opcjonalnie): jeśli rozpoznany z kontekstu
 
 #### `getSummaryAssessment(taskDescription, userSummary)`
 
-- **Zadanie:** ocenia jakość podsumowania wpisanego przez użytkownika
-- **Model:** `gpt-4o`
-- **Funkcja GPT:** `assess_summary`
-- **Zwraca:** `"error"` jeśli podsumowanie jest za słabe, lub wygładzony tekst
+- Ocenia, czy podsumowanie użytkownika spełnia standardy jakości
+- Jeśli nie – zwraca `"error"`
+- Jeśli tak – zwraca oceniony tekst
 
 #### `improveSummary(userSummary)`
 
-- **Zadanie:** wygładza zaakceptowane podsumowanie (językowo/stylistycznie)
-- **Model:** `gpt-4o`
-- **Funkcja GPT:** `improve_summary`
-- **Zwraca:** poprawiony tekst
+- Wygładza stylistycznie zaakceptowane podsumowanie
+- Przygotowuje je do trwałego zapisania w bazie
 
 ### ⚙️ Szczegóły techniczne
 
-- Wymuszony `tool_choice` → zawsze JSON w `tool_calls[].function.arguments`
-- Stateless – brak historii
-- Odpowiedzi zawsze w języku użytkownika
-- Temperatura `0.2–0.3` w zależności od funkcji
-
----
-
-## 📁 `services/embeddingService.js`
-
-Obsługuje generowanie i porównywanie embeddingów OpenAI.
-
-### 🔧 Funkcje:
-
-#### `generateEmbedding(text)`
-
-- **Model:** `text-embedding-3-small`
-- **Zwraca:** tablicę liczb – embedding dla tekstu `title + description`
-
-#### `findSimilarTasks(newEmbedding)`
-
-- **Zadanie:** znajduje zakończone zadania podobne semantycznie
-- **Algorytm:** cosine similarity
-- **Próg podobieństwa:** `≥ 0.75`
-- **Zwraca:** max 5 najbardziej podobnych zadań (`taskId`, `similarity`)
-
-#### `generateAndAttachEmbedding(taskId)`
-
-- Generuje embedding dla zadania
-- Znajduje podobne zakończone zadania
-- Zapisuje embedding i `similarTasks[]` do dokumentu zadania
+- Model: `gpt-4o`, temperatura 0.2–0.3
+- Odpowiedzi parsowane z `tool_calls[0].function.arguments`
+- Brak historii – każde zapytanie stateless
+- Obsługa błędów przez wyjątki
+- Nie zwraca fallbackowych `choices[].message.content`
 
 ---
 
 ## 📁 `services/aiSummaryService.js`
 
-Logika oceny i przetwarzania `summary` przy zamykaniu zadania.
+Moduł wysokopoziomowy odpowiedzialny za zamykanie zadań przy pomocy AI.
 
-### 🔧 Główna funkcja:
+### 🔧 Funkcja główna:
 
 #### `processTaskClosure({ task, userSummary, force })`
 
-- **Zadanie:** sprawdza poprawność `summary`, wygładza jeśli poprawne lub `force`
-- **Zwraca:** finalne `summary`, gotowe do zapisu
-- Obsługuje minimalną długość (40 znaków)
-- Używa `getSummaryAssessment` i `improveSummary`
+- Wywołuje `getSummaryAssessment(...)`
+- W razie potrzeby – `improveSummary(...)`
+- Jeśli `force = true`, zawsze akceptuje
+- W przeciwnym razie – wymaga poprawnego `summary`
+- Waliduje długość `summary` (min. 40 znaków)
+
+Wynik funkcji może być bezpośrednio zapisany jako `task.summary`.
+
+---
+
+## 📁 `services/embeddingService.js`
+
+Moduł generujący embeddingi z `text-embedding-3-small` i porównujący je do istniejących zadań.
+
+### 🔧 Funkcje:
+
+#### `generateEmbedding(text)`
+
+- Łączy `title + description` i generuje embedding (array floatów)
+- Model: `text-embedding-3-small`
+
+#### `findSimilarTasks(newEmbedding)`
+
+- Porównuje z zakończonymi zadaniami (`status = closed`)
+- Oblicza `cosine similarity`
+- Zwraca max 5 zadań powyżej progu 0.75
+
+#### `generateAndAttachEmbedding(taskId)`
+
+- Pobiera task, generuje embedding
+- Wykonuje porównanie z `findSimilarTasks`
+- Zapisuje wynik do `task.embedding` i `task.similarTasks`
 
 ---
 
 ## 📁 `services/openaiKeyManager.js`
 
-Obsługuje bezpieczne zarządzanie kluczem API do OpenAI.
+Moduł zarządzania kluczem OpenAI – pozwala na zapisany, szyfrowany i rotowany dostęp do API.
 
-### 🔐 Mechanizm:
-
-- Klucz może być przechowywany zaszyfrowany w MongoDB (`ApiKey`)
-- Algorytm szyfrowania: `AES-256-GCM`
-- `SECRET_ENCRYPTION_KEY` trzymany w `.env` (64 znaki HEX)
-- Możliwość fallbacku do `OPENAI_API_KEY` z `.env`
-
-### 🔧 Funkcje:
-
-#### `getOpenAIKey(scope = 'global')`
-
-- Pobiera klucz z bazy lub z `.env`
-- Cache’uje `scope = 'global'` w pamięci
+### 🔐 Funkcje:
 
 #### `setOpenAIKey({ apiKeyPlaintext, scope })`
 
-- Szyfruje i zapisuje klucz do bazy (`ApiKey`)
-- Obsługuje rotację (`rotatedAt`)
+- Domyślnie `scope = global`
+- Szyfruje klucz AES-256-GCM (`crypto`)
+- Zapisuje do MongoDB w kolekcji `ApiKey`
+- Zaktualizowany `rotatedAt` na każdą zmianę
+
+#### `getOpenAIKey(scope = 'global')`
+
+- Jeśli klucz zaszyfrowany w bazie → deszyfruje
+- Jeśli brak – fallback do `OPENAI_API_KEY` z `.env`
+- Wynik cache’owany per `scope`
 
 #### `encryptKey(...)`, `decryptKey(...)`
 
-- Wewnętrzne funkcje szyfrujące / deszyfrujące z użyciem `crypto` (Node.js)
+- Funkcje pomocnicze korzystające z `crypto.createCipheriv`, `createDecipheriv`
+- Klucz AES musi być w `.env` jako `SECRET_ENCRYPTION_KEY`
 
 ---
 
-## 📄 Powiązania z kontrolerami
+## 🔁 Zmiany względem poprzedniej wersji
 
-| Plik                              | Funkcje AI                                          |
-| --------------------------------- | --------------------------------------------------- |
-| `controllers/taskController.js`   | `createWithAI`, `closeWithAI`, `getSimilarTasks`    |
-| `controllers/systemController.js` | `POST /api/system/openai-key` (dodanie klucza)      |
-| `middleware/auth.js`              | wymagane dla działań AI powiązanych z użytkownikiem |
-
----
-
-## 📦 Obsługa modeli AI
-
-| Model                    | Użycie                                                |
-| ------------------------ | ----------------------------------------------------- |
-| `gpt-4o`                 | function calling, stateless (create, assess, improve) |
-| `text-embedding-3-small` | generowanie wektorów semantycznych                    |
+- Usunięto `gptService.function.js` – logika zintegrowana w `gptService.js`
+- `aiSummaryService.js` nie korzysta bezpośrednio z modeli – tylko z `gptService`
+- Dodano pełne wsparcie dla modelu `gpt-4o` z `tool_choice = required`
+- Endpoint `/api/system/openai-key` wykorzystuje `setOpenAIKey` (wcześniej logika inline)
+- Wprowadzono walidację długości `summary` i parametr `force`
 
 ---
 
-## 🧪 Testowanie i kontrola
+## 📦 Powiązania z kontrolerami
 
-- Wszystkie błędy związane z OpenAI są obsługiwane w `try/catch`
-- Odpowiedzi AI są zawsze parsowane z `tool_calls[0].function.arguments`
-- W `gptService` nie ma fallbacku do `content` – błędy są rzucane jawnie
-- AI nigdy nie działa samodzielnie – decyzję o `summary` podejmuje użytkownik
+| Kontroler             | Powiązane funkcje                                 |
+| --------------------- | ------------------------------------------------- |
+| `taskController.js`   | `createTaskWithAI`, `closeTaskWithAI`             |
+| `systemController.js` | `setOpenAIKey()`                                  |
+| `middleware/auth.js`  | wymagany JWT przed użyciem któregokolwiek serwisu |
 
 ---
 
-## 📄 Dokumentacja powiązana
+## 📘 Dokumentacja powiązana
 
-- `ai_integration.md` – ogólny przegląd integracji z AI
-- `controllers.md` – endpointy `/ai-create`, `/ai-close`, `/openai-key`
-- `db_schema.md` – struktura `Task`, `ApiKey`
-- `project_overview.md`, `backend_overview.md` – kontekst działania AI
+- `controllers.md` – definicje endpointów AI
+- `routes.md` – dostępność tras
+- `api_spec.md` – definicje danych wejściowych i wyjściowych
+- `middleware.md` – walidacja i auth
+- `utils/responseHandler.js` – obsługa błędów z poziomu `service` przez `try/catch`

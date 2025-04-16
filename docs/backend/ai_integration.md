@@ -100,7 +100,7 @@ Zadania podobne:
 
 ## ⚙️ Obsługa backendowa
 
-### 🧠 `gptService.function.js`
+### 🧠 `gptService.js`
 
 - `getTaskStructureFromAI(description)`
 - `getSummaryAssessment(taskDescription, userSummary)`

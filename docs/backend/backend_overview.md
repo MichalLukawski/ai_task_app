@@ -1,172 +1,189 @@
-# 🧱 AI Task App – Backend Overview (pełna wersja, rozszerzona)
+# 🧱 Backend Overview – AI Task App (zaktualizowana wersja)
 
-Ten dokument stanowi pełny opis warstwy backendowej aplikacji AI Task App, służącej do zarządzania zadaniami użytkowników z pomocą sztucznej inteligencji (GPT-4o) oraz mechanizmu semantycznego porównywania problemów.
-
-Dokument ma na celu zaprezentowanie:
-
-- architektury backendu,
-- relacji między modułami,
-- decyzji projektowych,
-- oraz technicznych szczegółów integracji z AI i OpenAI.
+Backend aplikacji AI Task App zbudowany jest w oparciu o architekturę REST API, modularną strukturę folderów i konwencje projektowe zapewniające przejrzystość, łatwą rozbudowę i pełną izolację logiki domenowej. Backend pełni rolę API serwera i integratora warstw: frontendowej, bazy danych oraz zewnętrznego API OpenAI.
 
 ---
 
-## 🎯 Główna rola backendu
+## 🔧 Technologie i zależności główne
 
-Backend pełni funkcję centralnego systemu aplikacji:
-
-- zarządza kontami użytkowników,
-- zapewnia bezpieczny dostęp przez JWT,
-- zapisuje i pobiera zadania (`Task`),
-- integruje się z GPT-4o i embeddingami OpenAI,
-- wykonuje automatyczne klasyfikacje i oceny,
-- porównuje zadania semantycznie i przypisuje podobne przypadki.
+- **Node.js + Express** – główna platforma serwerowa
+- **MongoDB (Mongoose)** – baza danych dokumentowa
+- **JWT (`jsonwebtoken`)** – autoryzacja
+- **bcrypt** – szyfrowanie haseł
+- **OpenAI API** – integracja GPT-4o i embeddingów
+- **express-validator** – walidacja danych wejściowych
+- **dotenv** – konfiguracja zmiennych środowiskowych
+- **crypto** – szyfrowanie klucza OpenAI (AES-256-GCM)
 
 ---
 
-## 📐 Architektura – przegląd modułów
+## 📁 Struktura katalogów backendu
 
 ```
 backend/
-├── config/                # Połączenie z MongoDB (mongoose)
-├── controllers/           # Główna logika dla tras API
-├── middleware/            # Autoryzacja, walidacja, błędy
-├── models/                # Schematy Mongoose
-├── routes/                # Pliki routingu
-├── services/              # Integracja z GPT, embeddingi, AI logic
-├── utils/                 # responseHandler (formatowanie odpowiedzi)
-├── validators/            # express-validator dla tras
-└── server.js              # Punkt startowy aplikacji
+├── controllers/         # Logika wykonawcza dla tras API
+├── routes/              # Deklaracja tras i middleware
+├── services/            # Warstwa domenowa – AI, embeddingi, klucze
+├── middleware/          # Uwierzytelnianie, walidacja, błędy
+├── validators/          # Definicje walidacji danych wejściowych
+├── models/              # Schematy Mongoose
+├── utils/               # Uniwersalne funkcje wspierające
+├── config/              # Konfiguracja środowiska (opcjonalnie)
+└── server.js            # Główny plik uruchomieniowy Express
 ```
 
 ---
 
-## 🧾 Modele danych
+## ⚙️ Moduły backendowe i odpowiedzialności
 
-### 👤 User
+### `controllers/`
 
-- `email`, `password` (haszowany)
-- `role`: `"user"` lub `"admin"`
-- `emailVerified`: weryfikacja przez email (planowane)
-- `approvedByAdmin`: zatwierdzanie rejestracji przez administratora
-- Powiązany z zadaniami poprzez `ownerId`
-
-### 📄 Task
-
-- `title`, `description`, `status`
-- `dueDate`, `difficulty`, `summary`, `notes`
-- `embedding`: wektor semantyczny (float[])
-- `similarTasks`: lista `_id` zakończonych zadań o podobnej treści
-- Tworzone manualnie lub przez GPT
-
-### 🔐 ApiKey
-
-- Przechowuje zaszyfrowany klucz OpenAI (`encryptedKey`, `iv`, `tag`)
-- Algorytm: `AES-256-GCM`
-- Obsługuje `scope = "global"` (w przyszłości: `userId`)
-- Służy do zarządzania kluczem dostępu do GPT/embeddingów
+- `authController.js` – logowanie i rejestracja użytkowników
+- `taskController.js` – obsługa zadań: tworzenie, edycja, zamykanie
+- `systemController.js` – konfiguracja klucza OpenAI
+- Wszystkie funkcje używają `sendSuccess` / `sendError`
+- Obsługa błędów przez `handleTryCatch(...)` (brak `try/catch` lokalnych)
 
 ---
 
-## 🔗 Integracja z GPT (OpenAI)
+### `routes/`
 
-### 📁 `services/gptService.function.js`
-
-- `getTaskStructureFromAI(description)` → `create_task`
-- `getSummaryAssessment(task, userSummary)` → `assess_summary`
-- `improveSummary(summary)` → `improve_summary`
-- Wszystko z użyciem `function_calling` i `tool_choice`
-
-### 📁 `services/aiSummaryService.js`
-
-- Obsługuje zamykanie zadania:
-  - Waliduje jakość `summary` (40+ znaków)
-  - W razie potrzeby pozwala na `force`
-  - Przesyła do `gptService` do wygładzenia
+- Trasy podzielone tematycznie:
+  - `authRoutes.js`
+  - `taskRoutes.js`
+  - `systemRoutes.js`
+- Middleware:
+  - `auth` (JWT)
+  - `validate*` (walidatory `express-validator`)
+- Wszystkie funkcje opakowane w `handleTryCatch(...)`
 
 ---
 
-## 🧠 Embeddingi i podobieństwo zadań
+### `services/`
 
-### 📁 `services/embeddingService.js`
+- `gptService.js` – low-level połączenie z GPT-4o
+- `aiSummaryService.js` – logika zamykania zadań przy użyciu AI
+- `embeddingService.js` – generowanie i porównywanie embeddingów
+- `openaiKeyManager.js` – szyfrowanie, zapis i odczyt klucza OpenAI
 
-- Generuje embeddingi z `text-embedding-3-small`
-- Porównuje je przez cosine similarity
-- Dla nowych zadań przypisuje max 5 podobnych (`similarTasks`)
-- Próg podobieństwa: `0.75`
-
----
-
-## 🔐 Bezpieczeństwo
-
-- JWT do uwierzytelnienia użytkownika
-- bcrypt do haszowania haseł
-- AES-256-GCM do szyfrowania kluczy API
-- Middleware `auth.js`, `validate.js`, `errorHandler.js`
+> Warstwa usług zawiera wyłącznie logikę domenową – żadnej logiki HTTP, tras, odpowiedzi, res/req.
 
 ---
 
-## 🧪 Przykład przepływu użytkownika (user journey)
+### `middleware/`
 
-1. Użytkownik rejestruje konto → trafia jako nieaktywne (`approvedByAdmin = false`)
-2. Po zatwierdzeniu przez admina → może się zalogować
-3. Tworzy zadanie z pomocą AI → GPT generuje dane → embedding porównuje z przeszłością
-4. Zamykając zadanie, wpisuje podsumowanie → AI ocenia jego jakość
-5. Jeśli poprawne → AI wygładza język i zapisuje `summary`
+- `auth.js` – walidacja tokena JWT, przypisanie `req.user`
+- `validate.js` – sprawdzenie błędów z `express-validator`
+- `errorHandler.js` – globalna obsługa błędów (opcjonalnie)
 
 ---
 
-## 📊 Warstwa usług – zależności między modułami
+### `validators/`
 
-- `routes/taskRoutes.js`
-  → `controllers/taskController.js`
-  → `services/gptService.function.js`
-  → `services/aiSummaryService.js`
-  → `services/embeddingService.js`
-  → `models/Task.js`
-
-- `routes/systemRoutes.js`
-  → `controllers/systemController.js`
-  → `services/openaiKeyManager.js`
-  → `models/ApiKey.js`
+- `authValidator.js` – walidacja loginu i rejestracji
+- `taskValidator.js` – tworzenie, edycja, zamykanie zadań
+- Spójne komunikaty walidacyjne
+- Walidacja wspierana przez `validate.js` – zwraca błąd `VALIDATION_ERROR`
 
 ---
 
-## 🌐 Endpointy i ich funkcje
+### `models/`
 
-- `POST /api/tasks/ai-create` – tworzy zadanie z pomocą AI
-- `PATCH /api/tasks/:id/ai-close` – zamyka zadanie z pomocą AI (`summary`)
-- `PATCH /api/tasks/:id/close` – kopiuje podsumowanie z innego zadania
-- `POST /api/system/openai-key` – szyfruje i zapisuje klucz OpenAI
-- `GET /api/tasks` – lista zadań użytkownika
-
----
-
-## 📁 Walidacja i odpowiedzi
-
-- `validators/taskValidator.js` + `validate.js`
-- Ujednolicone odpowiedzi: `utils/responseHandler.js`
-- Błędy walidacji: kod 400, lista pól + komunikat
+- `Task` – podstawowa jednostka danych:
+  - `title`, `description`, `status`, `difficulty`, `dueDate`
+  - `summary`, `embedding[]`, `similarTasks[]`, `ownerId`
+- `User` – zawiera `email`, `password` (haszowany), role (na przyszłość)
+- `ApiKey` – przechowuje zaszyfrowany klucz OpenAI + daty rotacji
 
 ---
 
-## 📈 Planowane rozszerzenia backendu
+### `utils/`
 
-- Link aktywacyjny e-mail (z tokenem)
-- Panel admina (frontend) do zatwierdzania kont
-- Per-user OpenAI API Key (`scope = userId`)
-- Logika feedbacku „czy podobne zadanie pomogło”
-- Ograniczenia użycia AI (np. dzienny limit zapytań)
+- `responseHandler.js`:
+  - `sendSuccess(res, msg, data)`
+  - `sendError(res, msg, status, code)`
+  - `handleTryCatch(fn)` – obsługa `async/await` błędów
+- Planowane: `formatDate`, `logObject`, `parseAIResponse`
 
 ---
 
-## 📄 Powiązane dokumenty
+## 🔐 Autoryzacja
 
-- `project_overview.md`
-- `services.md`
-- `api_spec.md`
-- `controllers.md`
-- `validators.md`
-- `middleware.md`
-- `utils.md`
-- `db_schema.md`
+- JWT przekazywany w nagłówku `Authorization`
+- Token zawiera tylko `id` użytkownika
+- Użytkownik dołączany do `req.user` (z `email`, `role`)
+- Autoryzacja obowiązuje dla wszystkich tras poza `/auth/*`
+
+---
+
+## 🤖 Integracja z AI
+
+- Model: `gpt-4o`, `function_calling`, `tool_choice: required`
+- Scenariusze:
+  - Tworzenie zadania (`create_task`)
+  - Ocena `summary` (`evaluate_summary`)
+  - Poprawa stylistyki (`improve_summary`)
+- Obsługa przez `gptService.js`, wykorzystywane przez `aiSummaryService`
+
+---
+
+## 📊 Embeddingi i porównywanie
+
+- Wykorzystanie `text-embedding-3-small` (OpenAI)
+- Generowanie z połączenia `title + description`
+- Porównywanie `cosine similarity`
+- Próg podobieństwa: 0.75
+- Maksymalnie 5 podobnych zadań
+- Zapis do `task.embedding` i `task.similarTasks`
+
+---
+
+## 🛡️ Obsługa klucza OpenAI
+
+- Szyfrowanie: AES-256-GCM (z `crypto`)
+- Klucz deszyfrowany tylko przy użyciu `SECRET_ENCRYPTION_KEY`
+- Endpoint: `POST /api/system/openai-key`
+- Wsparcie dla `scope` i daty `rotatedAt`
+
+---
+
+## 🧩 Błędy i odpowiedzi
+
+- `sendSuccess(...)` – ujednolicony format odpowiedzi
+- `sendError(...)` – obsługa kodów błędów, własne `code`
+- `handleTryCatch(...)` – pełna eliminacja try/catch w kodzie kontrolerów
+- Przykłady błędów:
+  - `VALIDATION_ERROR`
+  - `NO_TOKEN`
+  - `INVALID_TOKEN`
+  - `SUMMARY_TOO_SHORT`
+  - `EMBEDDING_ERROR`
+
+---
+
+## 🧠 Przykład przepływu: zamykanie zadania z AI
+
+1. Użytkownik wpisuje `summary` i zatwierdza
+2. Wywoływane jest `PATCH /api/tasks/:id/ai-close`
+3. Walidacja `summary` i `force`
+4. `aiSummaryService.processTaskClosure(...)`
+5. Ocena jakości tekstu → poprawa stylistyki → zapis
+6. Task otrzymuje `summary`, `status = closed`
+
+---
+
+## 🔁 Komunikacja z frontendem
+
+- Wszystkie odpowiedzi: `status`, `message`, `data`
+- Brak `statusCode` – kod HTTP w nagłówku
+- Frontend odbiera dane i aktualizuje lokalny state (`onTaskUpdated`)
+- Frontend przekazuje `token` przez `Authorization`
+
+---
+
+## 📄 Dokumentacja uzupełniająca
+
+- `controllers.md` – opis logiki funkcji
+- `routes.md` – mapa tras i middleware
+- `services.md` – logika AI i embeddingów
+- `validators.md`, `utils.md`, `api_spec.md`
