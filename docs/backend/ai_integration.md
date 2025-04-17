@@ -69,6 +69,8 @@ Po zapisaniu zadania:
 - Generowany jest embedding
 - Zadanie zostaje porównane z zakończonymi i przypisywane są `similarTasks`
 
+> 🔧 W wersji poprawionej logiki `getTaskStructureFromAI()` wynikowe argumenty `tool_calls[0].function.arguments` muszą być sparsowane za pomocą `JSON.parse(...)`, ponieważ API zwraca je jako ciąg tekstowy. Dodano też walidację (np. brak `title` powoduje wyjątek).
+
 ---
 
 ### 2. Zamykanie zadania (AI)
@@ -103,10 +105,16 @@ Zadania podobne:
 ### 🧠 `gptService.js`
 
 - `getTaskStructureFromAI(description)`
+
+  - Dodano `JSON.parse()` na `tool_calls[0].function.arguments`
+  - Walidacja: `title`, `description`, `difficulty`
+
 - `getSummaryAssessment(taskDescription, userSummary)`
+
+  - Zwraca: `{ summary, error }`
+
 - `improveSummary(userSummary)`
-- Obsługa `function calling` z wymuszoną funkcją (`tool_choice`)
-- Stateless – brak kontekstu z poprzednich rozmów
+  - Zwraca: `summary` po korekcie językowej
 
 ### 🧠 `aiSummaryService.js`
 
@@ -129,7 +137,7 @@ Zadania podobne:
 - Model: `models/ApiKey.js`
 - AES-256-GCM (`crypto.createCipheriv`)
 - Pola w bazie:
-  - `scope` (np. `"global"`, w przyszłości `userId`)
+  - `scope` (np. "global", w przyszłości `userId`)
   - `encryptedKey`, `iv`, `tag`
 - W przypadku braku klucza → fallback do `OPENAI_API_KEY` z `.env`
 
@@ -166,3 +174,4 @@ Zadania podobne:
 - `api_spec.md`
 - `db_schema.md`
 - `middleware.md`
+- `api-integration.md`

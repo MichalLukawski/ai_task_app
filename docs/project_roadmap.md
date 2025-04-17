@@ -93,15 +93,19 @@ Każdy etap zawiera podsumowanie wykonanych działań, uzasadnienie techniczne o
 
 ---
 
-## Etap 8 – Ulepszenie UX edycji zadań (w trakcie)
+## Etap 8 – Ulepszenie UX edycji zadań (ukończony)
 
 - Refaktoryzacja `useTaskCardState.jsx`:
   - model `editedTask` lokalnie zarządza `difficulty`, `dueDate`
-  - UI aktualizuje się natychmiast, zapis następuje po kliknięciu/Enter
-- Zastosowanie `useApi()` jako warstwy komunikacji z backendem
-- Zmiana: brak autozapisu, zapis wyłącznie po `click` poza lub `Enter`
-- Widok `TaskCardView` oparty o `editedTask` (widoczność zmian przed zapisem)
-- Trwa testowanie synchronizacji z `onTaskUpdated(...)` i zapisów do bazy
+  - UI aktualizuje się natychmiast, zapis następuje po kliknięciu w kartę, poza nią, lub po naciśnięciu `Enter`
+- Zmiana: brak autozapisu, zapis wyłącznie po intencjonalnym zakończeniu edycji
+- Widok `TaskCardView` oparty o `editedTask` (natychmiastowa prezentacja zmian)
+- Obsługa kliknięć i klawisza `Enter` w celu otwierania, zapisywania i zamykania karty
+- Mechanizm `showSaved` oraz `isSaving` – UX informujący o trwającym zapisie
+- Dodanie synchronizacji z backendem (`PATCH` → `GET`) po zapisaniu wartości
+- Wsparcie `onTaskUpdated(...)` – przekazanie nowej wersji danych do `DashboardPage`
+- Mechanizm fokusowania tylko jednej karty (`focusedCardId`)
+- Obsługa zamykania karty, jeśli kliknięto ponownie bez wprowadzenia zmian
 
 ---
 
@@ -113,6 +117,9 @@ Każdy etap zawiera podsumowanie wykonanych działań, uzasadnienie techniczne o
 - Logowanie działań użytkownika (audyt)
 - Kontrola ról (`admin`, `user`)
 - Interfejs konfiguracji AI (model, temperatura, tokeny)
+- Tryby pracy AI (mentor/debugger/ekspert)
+- Testowanie rozwiązań GPT offline (prompt mirror + offline logs)
+- Automatyczne testy komponentów (Jest/Playwright)
 - Pełna dokumentacja dla zespołu (markdown + generator)
 
 ---

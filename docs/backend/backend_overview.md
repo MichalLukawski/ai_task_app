@@ -14,6 +14,7 @@ Backend aplikacji AI Task App zbudowany jest w oparciu o architekturę REST API,
 - **express-validator** – walidacja danych wejściowych
 - **dotenv** – konfiguracja zmiennych środowiskowych
 - **crypto** – szyfrowanie klucza OpenAI (AES-256-GCM)
+- **axios** – opcjonalne zapytania z backendu do zewnętrznych API
 
 ---
 
@@ -43,6 +44,7 @@ backend/
 - `systemController.js` – konfiguracja klucza OpenAI
 - Wszystkie funkcje używają `sendSuccess` / `sendError`
 - Obsługa błędów przez `handleTryCatch(...)` (brak `try/catch` lokalnych)
+- Funkcja `createTaskWithAI` przetwarza `POST /tasks/ai-create` poprzez GPT
 
 ---
 
@@ -61,10 +63,15 @@ backend/
 
 ### `services/`
 
-- `gptService.js` – low-level połączenie z GPT-4o
+- `gptService.js` – low-level połączenie z GPT-4o (z `function_calling`)
+  - funkcje: `getTaskStructureFromAI`, `getSummaryAssessment`, `improveSummary`
+  - `getTaskStructureFromAI()` analizuje i waliduje dane z GPT, korzysta z `JSON.parse(...)` do odczytu argumentów
 - `aiSummaryService.js` – logika zamykania zadań przy użyciu AI
+  - funkcja `processTaskClosure()` kontroluje przepływ od oceny `summary` po jego poprawę stylistyczną
 - `embeddingService.js` – generowanie i porównywanie embeddingów
+  - `generateEmbedding`, `findSimilarTasks`, `generateAndAttachEmbedding`
 - `openaiKeyManager.js` – szyfrowanie, zapis i odczyt klucza OpenAI
+  - AES-256-GCM, obsługa `rotatedAt` i `scope`
 
 > Warstwa usług zawiera wyłącznie logikę domenową – żadnej logiki HTTP, tras, odpowiedzi, res/req.
 
@@ -82,7 +89,6 @@ backend/
 
 - `authValidator.js` – walidacja loginu i rejestracji
 - `taskValidator.js` – tworzenie, edycja, zamykanie zadań
-- Spójne komunikaty walidacyjne
 - Walidacja wspierana przez `validate.js` – zwraca błąd `VALIDATION_ERROR`
 
 ---
@@ -116,34 +122,39 @@ backend/
 
 ---
 
-## 🤖 Integracja z AI
+## 🤖 Integracja z AI (OpenAI)
 
-- Model: `gpt-4o`, `function_calling`, `tool_choice: required`
+- Model: `gpt-4o`
+- Wykorzystanie `function_calling` z parametrem `tool_choice: required`
 - Scenariusze:
-  - Tworzenie zadania (`create_task`)
-  - Ocena `summary` (`evaluate_summary`)
-  - Poprawa stylistyki (`improve_summary`)
-- Obsługa przez `gptService.js`, wykorzystywane przez `aiSummaryService`
+  - `create_task` – tworzenie struktury zadania z opisu
+  - `assess_summary` – ocena jakości `summary`
+  - `improve_summary` – poprawa stylistyki
+
+Funkcje zostały rozdzielone, a ich wywołanie determinowane jest nazwą funkcji w polu `tool_calls`. Zwracana zawartość `arguments` jest zawsze parsowana przez `JSON.parse()`.
 
 ---
 
 ## 📊 Embeddingi i porównywanie
 
-- Wykorzystanie `text-embedding-3-small` (OpenAI)
-- Generowanie z połączenia `title + description`
-- Porównywanie `cosine similarity`
-- Próg podobieństwa: 0.75
-- Maksymalnie 5 podobnych zadań
-- Zapis do `task.embedding` i `task.similarTasks`
+- Model: `text-embedding-3-small`
+- Generowanie embeddingów przez `generateEmbedding(text)`
+- Porównanie: `findSimilarTasks(newEmbedding)` – `cosine similarity`
+- Próg: 0.75
+- Zwracane maksymalnie 5 podobnych zadań (`similarTasks`)
+- Dane zapisywane do: `task.embedding`, `task.similarTasks`
 
 ---
 
 ## 🛡️ Obsługa klucza OpenAI
 
-- Szyfrowanie: AES-256-GCM (z `crypto`)
-- Klucz deszyfrowany tylko przy użyciu `SECRET_ENCRYPTION_KEY`
-- Endpoint: `POST /api/system/openai-key`
-- Wsparcie dla `scope` i daty `rotatedAt`
+- Szyfrowanie: AES-256-GCM (moduł `crypto`)
+- Przechowywanie zaszyfrowanego klucza w kolekcji `ApiKey`
+- Dekodowanie możliwe tylko przy obecności `SECRET_ENCRYPTION_KEY`
+- Fallback: `OPENAI_API_KEY` z `.env`
+- Endpoint do zarządzania: `POST /api/system/openai-key`
+- Pola w bazie:
+  - `scope`, `encryptedKey`, `iv`, `tag`, `rotatedAt`
 
 ---
 
@@ -152,12 +163,13 @@ backend/
 - `sendSuccess(...)` – ujednolicony format odpowiedzi
 - `sendError(...)` – obsługa kodów błędów, własne `code`
 - `handleTryCatch(...)` – pełna eliminacja try/catch w kodzie kontrolerów
-- Przykłady błędów:
+- Kody błędów:
   - `VALIDATION_ERROR`
   - `NO_TOKEN`
   - `INVALID_TOKEN`
   - `SUMMARY_TOO_SHORT`
   - `EMBEDDING_ERROR`
+  - `MISSING_TITLE_FROM_GPT`
 
 ---
 
@@ -176,8 +188,9 @@ backend/
 
 - Wszystkie odpowiedzi: `status`, `message`, `data`
 - Brak `statusCode` – kod HTTP w nagłówku
-- Frontend odbiera dane i aktualizuje lokalny state (`onTaskUpdated`)
 - Frontend przekazuje `token` przez `Authorization`
+- W przypadku `PATCH`/`POST` → frontend wykonuje `GET` dla synchronizacji danych (`refetchAfterSave`)
+- Backend zwraca zawsze aktualny stan zadania po zapisaniu
 
 ---
 

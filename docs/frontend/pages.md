@@ -22,6 +22,7 @@ pages/
 - Widoki są montowane przez `App.jsx` na podstawie trasy (`react-router-dom`)
 - Stylizacja: wyłącznie z użyciem TailwindCSS (`className`)
 - Komponenty z `pages/` nie implementują niskopoziomowej logiki – korzystają z komponentów z `components/`, hooków oraz kontekstu
+- Logika biznesowa znajduje się w hookach (`useTaskCardState`) lub backendzie
 
 ---
 
@@ -88,8 +89,11 @@ pages/
 - Renderuje listę `TaskCard` (poprzez `TaskList`)
 - Pozwala na:
   - dodawanie nowego zadania z pomocą AI (`CreateTaskForm`)
-  - przegląd, edycję i zamykanie zadań (`TaskCardView` / `TaskCardEdit`)
-  - podgląd poziomu trudności (`DifficultyStars`) i terminu (`DueDateProgress`)
+  - przegląd, edycję i zamykanie zadań (`TaskCardView`)
+  - aktualizację terminów i trudności (`DueDateEditor`, `DifficultySelector`)
+  - wizualizację stanu (`DueDateProgress`, `DifficultyStars`)
+- Obsługuje aktualizację lokalnej listy zadań poprzez `onTaskUpdated(task)`
+- Zarządza fokusowaniem kart (`focusedCardId`) – tylko jedna karta może być aktywna w danym czasie
 
 ### 📌 Stylizacja
 
@@ -112,7 +116,8 @@ pages/
 ## 🧩 Uwagi i rozbieżności
 
 - Nazwa `TasksPage.jsx` została zmieniona na `DashboardPage.jsx` – aktualna konwencja pliku i trasy to `/dashboard`
-- Brak osobnej strony `TaskFormPage.jsx` – funkcja tworzenia zadania z AI została zintegrowana z `DashboardPage` (formularz `CreateTaskForm` jako część widoku)
+- Brak osobnej strony `TaskFormPage.jsx` – funkcja tworzenia zadania z AI została zintegrowana z `DashboardPage`
+- Fokusowanie i zamykanie kart jest teraz obsługiwane w pełni przez `DashboardPage`, nie przez same komponenty kart
 
 ---
 
@@ -122,3 +127,4 @@ pages/
 - `components.md` – opis `TaskCard`, `CreateTaskForm`, `DifficultyStars`
 - `task_flow.md` – szczegółowy przebieg tworzenia i obsługi zadania
 - `context.md` – logika uwierzytelniania (`useAuth`)
+- `hooks.md` – zarządzanie stanem edycji zadań

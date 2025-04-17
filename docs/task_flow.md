@@ -1,8 +1,8 @@
-# 📊 Task Flow – AI Task App (zaktualizowana wersja)
+# 📊 Task Flow – AI Task App (zaktualizowana i rozszerzona wersja)
 
-Niniejszy dokument przedstawia pełny przepływ tworzenia, edytowania, zamykania i obsługi zadań (tasks) w aplikacji AI Task App. Obejmuje zarówno procesy wykonywane ręcznie przez użytkownika, jak i działania zautomatyzowane lub wspomagane przez sztuczną inteligencję (GPT-4o).
+Niniejszy dokument przedstawia pełny, szczegółowy przepływ tworzenia, edytowania, zamykania i obsługi zadań (`tasks`) w aplikacji AI Task App. Obejmuje zarówno procesy wykonywane ręcznie przez użytkownika, jak i działania zautomatyzowane lub wspomagane przez sztuczną inteligencję (GPT-4o). Uwzględniono tu również komunikację pomiędzy frontendem a backendem, sposób synchronizacji stanu oraz interakcje użytkownika z komponentami UI.
 
-Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy zadań w kontekście danych, interakcji z API oraz komunikacji frontend ↔ backend.
+Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy zadań w kontekście danych, interakcji z API oraz logiki aplikacji.
 
 ---
 
@@ -13,15 +13,15 @@ Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy za
 1. Użytkownik wypełnia formularz `CreateTaskForm`
 2. Pola obowiązkowe: `description` (min. 5 znaków)
 3. Dodatkowe pola: `title`, `dueDate`, `difficulty`
-4. Walidacja danych po stronie frontend i backend (`taskValidator.js`)
-5. Wysłanie żądania POST
+4. Walidacja danych po stronie frontend (podstawowa) i backend (`taskValidator.js`)
+5. Wysłanie żądania `POST` na endpoint
 6. Backend zapisuje zadanie w MongoDB (`ownerId` = `req.user.id`)
-7. Backend zwraca pełny obiekt `task`
+7. Backend zwraca pełny obiekt `task` (z ID, timestampami itp.)
 
 ### Efekt:
 
-- Zadanie pojawia się w liście na dashboardzie
-- Nie ma wygenerowanego `embedding` ani `similarTasks`
+- Zadanie pojawia się natychmiast w liście zadań (`DashboardPage`)
+- Brak `embedding` i `similarTasks` (nie są generowane dla ręcznych zadań)
 
 ---
 
@@ -29,44 +29,52 @@ Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy za
 
 ### Etapy:
 
-1. Użytkownik wpisuje naturalny opis zadania (np. "Aplikacja mobilna zamyka się przy starcie")
-2. Frontend wysyła POST do `/api/tasks/ai-create`
+1. Użytkownik wpisuje naturalny opis zadania (np. "Strona ładuje się zbyt wolno na urządzeniach mobilnych")
+2. Frontend wysyła `POST` do `/api/tasks/ai-create`
 3. Backend uruchamia funkcję `getTaskStructureFromAI(description)`:
-   - Wywołuje GPT-4o z `function_calling`
-   - Otrzymuje: `title`, `description`, `difficulty`, `dueDate`
-4. Tworzony jest task z tymi danymi
+   - Wywołuje GPT-4o z użyciem `function_calling`
+   - Otrzymuje strukturę: `title`, `description`, `difficulty`, `dueDate`
+   - Wynik `function.arguments` jest parsowany przez `JSON.parse(...)`
+   - Przeprowadzana jest walidacja zwróconych danych
+4. Tworzone jest nowe zadanie (`Task.create(...)`)
 5. Backend wykonuje `generateAndAttachEmbedding(taskId)`:
-   - Generuje embedding (OpenAI: `text-embedding-3-small`)
-   - Porównuje z zamkniętymi zadaniami
-   - Przypisuje `similarTasks` do obiektu `task`
-6. Zadanie jest zapisywane i zwracane
+   - Generuje embedding przez OpenAI (model `text-embedding-3-small`)
+   - Porównuje embedding z zakończonymi zadaniami
+   - Przypisuje `similarTasks` (jeśli podobieństwo ≥ 0.75, max 5)
+6. Zapis zadania i zwrot pełnego obiektu `task` do frontendu
 
 ---
 
 ## 3️⃣ Edycja zadania (`PATCH /api/tasks/:id`)
 
-### Od strony frontend (kluczowe):
+### Od strony frontend:
 
-1. Komponent `TaskCard` zawiera `useTaskCardState(task, onTaskUpdated)`
-2. Po kliknięciu w kartę aktywowany jest tryb edycji
-3. Użytkownik może zmienić:
-   - `difficulty` (komponent: `DifficultySelector`)
-   - `dueDate` (komponent: `DueDateEditor`)
-4. Wartości edytowane lokalnie w `editedTask` (`useState`)
-5. Widok aktualizuje się od razu na podstawie `editedTask`
-6. Zapis następuje **dopiero po:**
-   - kliknięciu poza kartę (ale nie w pole edytowalne)
-   - kliknięciu ponownym w kartę
-   - naciśnięciu `Enter`
-7. Funkcja `save()` wywołuje `PATCH /api/tasks/:id`
-8. Odpowiedź zawiera pełny, zaktualizowany obiekt `task`
-9. `onTaskUpdated(task)` aktualizuje listę zadań w `DashboardPage`
+1. Komponent `TaskCard` uruchamia hook `useTaskCardState(task, onTaskUpdated)`
+2. Po kliknięciu w kartę następuje fokus (`isFocused = true`)
+3. Użytkownik może edytować:
+   - `dueDate` (komponent: `DueDateEditor`, `input[type=date]`)
+   - `difficulty` (komponent: `DifficultySelector`, `select`)
+4. Edytowane wartości przechowywane są lokalnie w `editedTask`
+5. Zmiany są natychmiast widoczne w UI, ale **nie zapisywane**
+6. Zapis danych (`PATCH`) następuje tylko gdy:
+   - użytkownik kliknie poza pole edycji (ale wewnątrz karty),
+   - kliknie ponownie w kartę (jeśli była fokusowana),
+   - naciśnie `Enter` w trybie edycji
+
+### Mechanizm zapisu:
+
+- Wywoływana jest funkcja `save()`, która:
+  - wykonuje `PATCH /api/tasks/:id`
+  - po sukcesie wywołuje `GET /api/tasks/:id` w celu pobrania aktualnych danych z backendu (synchronizacja)
+  - ustawia `showSaved = true` na 1.5 sekundy
+  - ustawia `isSaving = false` po zakończeniu operacji
 
 ### Od strony backend:
 
-- Dane są aktualizowane z użyciem `findOneAndUpdate`
-- Walidacja przez `validateUpdateTaskInput`
-- Odpowiedź standaryzowana: `sendSuccess(...)` z pełnym taskiem
+- Aktualizacja danych przy pomocy `findOneAndUpdate`
+- Walidacja wejściowa z `validateUpdateTaskInput`
+- Zwracany jest pełny, zaktualizowany obiekt `task`
+- Obsługa błędów (np. pusty `title`) zakończona statusem 400
 
 ---
 
@@ -75,57 +83,65 @@ Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy za
 ### Scenariusz:
 
 - Użytkownik wpisuje podsumowanie (`summary`) wykonanych działań
-- Może zaznaczyć `force`, jeśli chce wymusić zamknięcie mimo niedoskonałości tekstu
+- Opcjonalnie może zaznaczyć `force`, aby wymusić zaakceptowanie
 
 ### Backend:
 
-1. Wywołanie `processTaskClosure({ task, userSummary, force })`
-2. Funkcja uruchamia:
-   - `getSummaryAssessment(...)` – GPT-4o ocenia jakość
-   - `improveSummary(...)` – wygładza styl
-3. Jeśli tekst zaakceptowany → zapis jako `task.summary`, `status = closed`, `closedAt = now`
-4. Zwracany pełen `task`
+1. Wywoływana funkcja `processTaskClosure({ task, userSummary, force })`
+2. Uruchamiane są:
+   - `getSummaryAssessment(...)` – GPT ocenia jakość opisu
+   - `improveSummary(...)` – wygładza język podsumowania
+3. Jeśli wynik jest zaakceptowany:
+   - zapis `task.summary`, `status = closed`, `closedAt = now`
+4. Zwracany pełen obiekt `task`
 
 ---
 
-## 5️⃣ Zamykanie zadania przez kopiowanie podsumowania (`PATCH /api/tasks/:id/close`)
+## 5️⃣ Zamykanie zadania przez kopiowanie (`PATCH /api/tasks/:id/close`)
 
 ### Scenariusz:
 
-- Użytkownik wybiera zakończone zadanie z `summary`
-- Podaje `sourceTaskId`
+- Użytkownik wybiera inne zakończone zadanie (`sourceTaskId`)
+- Chce skopiować `summary`
 
 ### Backend:
 
-1. Sprawdza, czy `sourceTaskId` istnieje i zawiera `summary`
-2. Kopiuje `summary`, ustawia `status = closed`, `closedAt = now`
-3. Zwraca pełny task
+1. Sprawdzana jest obecność `sourceTaskId` oraz `summary` w źródle
+2. Wartość `summary` jest kopiowana do obecnego zadania
+3. Zadanie jest zamykane (`status = closed`, `closedAt = now`)
+4. Zwracany pełny obiekt `task`
 
 ---
 
 ## 6️⃣ Odświeżanie listy zadań (`GET /api/tasks`)
 
-- Zadania pobierane przy pierwszym załadowaniu dashboardu
-- Sortowane malejąco po `createdAt`
-- Frontend zapisuje wynik w stanie lokalnym
-- `onTaskUpdated` aktualizuje konkretne zadanie po edycji
+- Zadania pobierane przy pierwszym załadowaniu `DashboardPage`
+- Endpoint: `GET /api/tasks`
+- Dane sortowane po `createdAt` malejąco
+- Aktualizacja listy odbywa się również po:
+  - `onTaskUpdated(task)` – pojedyncze zadanie zaktualizowane
+  - zamknięciu zadania
+  - utworzeniu nowego
 
 ---
 
 ## 7️⃣ Walidacja i bezpieczeństwo
 
-- Wszystkie trasy `/tasks/*` zabezpieczone przez `auth.js`
-- Wszystkie dane wejściowe walidowane przez `taskValidator.js`
-- W przypadku błędów zwracany `400` z `VALIDATION_ERROR`
+- Wszystkie endpointy `/tasks/*` zabezpieczone przez `auth.js` (middleware JWT)
+- Wszystkie dane walidowane w `taskValidator.js`
+- W przypadku błędu:
+  - status `400 Bad Request`
+  - `errorCode: VALIDATION_ERROR` (np. brak `title`, zła data)
 
 ---
 
 ## 🔄 Zależności komponentów frontend
 
-- `TaskCard` → kontroluje tryb edycji i kliknięcia
-- `TaskCardEdit` → pola: `dueDate`, `difficulty`
-- `useTaskCardState` → zarządza `editedTask`, `save()`, `setIsEditing`
-- `TaskCardView` → pokazuje wartości z `editedTask` nawet w trybie readonly
+- `TaskCard.jsx` – logika fokusowania, zapisu, blur, enter, zamykania
+- `TaskCardView.jsx` – renderuje widok edytowalny/pasywny
+- `useTaskCardState.jsx` – przechowuje `editedTask`, obsługuje `save()`
+- `DueDateEditor.jsx`, `DifficultySelector.jsx` – edytory inline
+- `DashboardPage.jsx` – przechowuje listę zadań, reaguje na `onTaskUpdated`
 
 ---
 

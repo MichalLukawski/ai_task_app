@@ -1,4 +1,23 @@
-# Changelog
+# 📦 CHANGELOG – AI Task App (Backend-Only, Monorepo)
+
+Poniżej przedstawiono **zmiany backendowe** w projekcie AI Task App prowadzonym jako monorepo. Pominięto zmiany frontendowe i skupiono się wyłącznie na ewolucji API, integracji z AI, refaktoryzacji struktury backendu oraz dokumentacji warstwy serwera.
+
+---
+
+## [0.0.14] – 2025-04-17
+
+### 🔧 Backend – synchronizacja i refaktoryzacja API
+
+- Backend dostosowany do nowego modelu synchronizacji danych:
+  - `PATCH` do `Task` zwraca najnowszy stan zadania
+  - Frontend po aktualizacji wykonuje `GET /api/tasks/:id`
+- Uspójnienie obsługi błędów:
+  - Nowe kody: `MISSING_TITLE_FROM_GPT`, `VALIDATION_ERROR`
+- Aktualizacja `taskValidator.js`:
+  - Obsługa brakującego `title` i dynamiczna walidacja pól edytowanych
+- Dodanie lepszej diagnostyki błędów (logowanie, fallbacki)
+
+---
 
 ## [0.0.12] – 2025-04-14
 
@@ -12,8 +31,6 @@
 
 - Osobny panel administratora
 - Deployment aplikacji na VPS lub Vercel + Mongo Atlas
-
-# Changelog
 
 ## [0.0.11] – 2025-04-13
 

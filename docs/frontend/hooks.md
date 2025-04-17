@@ -20,42 +20,50 @@ Folder `hooks/` przechowuje funkcje Reactowe rozpoczynające się od `use`, zgod
 
 ### 📌 Opis
 
-Hook `useTaskCardState()` odpowiada za zarządzanie **lokalnym stanem pojedynczej karty zadania** (`TaskCard`). Umożliwia przełączanie między trybem podglądu (`View`) a trybem edycji (`Edit`), obsługuje aktualizację i anulowanie zmian, kontrolując wewnętrzny stan komponentu w sposób deklaratywny i czysty.
+Hook `useTaskCardState()` odpowiada za zarządzanie **lokalnym stanem pojedynczej karty zadania** (`TaskCard`). Umożliwia aktualizację pól edytowalnych, takich jak `dueDate` oraz `difficulty`, synchronizację z backendem, oraz zapewnia interfejs do komunikacji zwrotnej z komponentem nadrzędnym (`DashboardPage`). Hook został zaprojektowany w sposób reaktywny i odporny na błędy – obsługuje zarówno zapis, jak i synchronizację danych po aktualizacji.
+
+Hook zarządza wewnętrznym stanem edytowanego zadania (`editedTask`), kontroluje proces zapisu (`saveDueDate`, `saveDifficulty`) oraz uruchamia refetch danych po stronie backendu. Obsługuje również logikę komunikatów „Zapisuję...” i „Zapisano ✔”.
 
 ### 📄 API hooka
 
 ```js
 const {
-  isEditing,
-  editedTask,
-  handleEditClick,
-  handleCancelEdit,
-  handleSaveEdit,
-  handleFieldChange
-} = useTaskCardState(initialTask);
+  dueDate,
+  difficulty,
+  setDueDate,
+  setDifficulty,
+  saveDueDate,
+  saveDifficulty,
+  isSaving,
+  showSaved,
+  task,
+} = useTaskCardState(initialTask, onTaskUpdated);
 ```
 
-| Zmienna / Funkcja      | Typ        | Opis                                                                 |
-|------------------------|------------|----------------------------------------------------------------------|
-| `isEditing`            | `boolean`  | Czy karta aktualnie znajduje się w trybie edycji                    |
-| `editedTask`           | `object`   | Kopia edytowanego zadania (lokalny stan)                            |
-| `handleEditClick()`    | `function` | Przełącza kartę w tryb edycji                                       |
-| `handleCancelEdit()`   | `function` | Anuluje edycję, przywraca dane z `initialTask`                      |
-| `handleSaveEdit()`     | `function` | Zapisuje zmiany (zazwyczaj wywołuje PATCH do API)                   |
-| `handleFieldChange()`  | `function` | Obsługuje zmiany pól formularza edycji                              |
+| Zmienna / Funkcja    | Typ        | Opis                                                         |
+| -------------------- | ---------- | ------------------------------------------------------------ |
+| `dueDate`            | `string`   | Lokalna wartość daty zakończenia (w formacie `YYYY-MM-DD`)   |
+| `difficulty`         | `number`   | Lokalna wartość trudności zadania (1–5)                      |
+| `setDueDate(val)`    | `function` | Ustawia nową datę (przed zapisem)                            |
+| `setDifficulty(val)` | `function` | Ustawia nową trudność (przed zapisem)                        |
+| `saveDueDate()`      | `function` | Wysyła PATCH i GET, aktualizuje zadanie, ustawia `showSaved` |
+| `saveDifficulty()`   | `function` | Analogicznie jak wyżej                                       |
+| `isSaving`           | `boolean`  | Czy trwa zapis (pokazuje animację „Zapisuję...”)             |
+| `showSaved`          | `boolean`  | Czy pokazać informację „✔ Zapisano”                          |
+| `task`               | `object`   | Najnowsza wersja zadania po aktualizacji z backendu          |
+
+### 🔁 Dodatkowe szczegóły
+
+- Po `PATCH` do backendu, automatycznie wywoływany jest `GET /tasks/:id`
+- Odpowiedź z `GET` nadpisuje lokalny stan `task`, zapewniając spójność
+- Mechanizm `refetchAfterSave` zapobiega rozjazdom danych z backendem
+- Hook automatycznie resetuje `showSaved` po 1500ms (1.5 sekundy)
 
 ### 🔗 Powiązane komponenty
 
-- `TaskCard.jsx` – korzysta z hooka do przełączania stanu między widokiem a edycją
-- `TaskCardView.jsx` – aktywuje `handleEditClick()`
-- `TaskCardEdit.jsx` – używa `editedTask`, `handleFieldChange`, `handleSaveEdit`, `handleCancelEdit`
-
-### 💡 Zalety podejścia
-
-- separacja logiki edycji od logiki prezentacji,
-- łatwość testowania (można testować hook niezależnie),
-- ułatwienie debugowania i utrzymania kodu,
-- umożliwia ponowne użycie logiki w innych komponentach (jeśli zajdzie taka potrzeba).
+- `TaskCard.jsx` – steruje cyklem edycji, przekazuje funkcje do `TaskCardView`
+- `TaskCardView.jsx` – aktywuje pola edytowalne i zapisuje dane przez hook
+- `DueDateEditor.jsx`, `DifficultySelector.jsx` – używają `setXxx()` i `saveXxx()`
 
 ---
 
@@ -69,12 +77,12 @@ Chociaż nie znajduje się w folderze `hooks/`, hook `useAuth()` zdefiniowany je
 const { user, isAuthenticated, login, logout } = useAuth();
 ```
 
-| Pole / funkcja | Opis                                                       |
-|----------------|------------------------------------------------------------|
-| `user`         | Obiekt zalogowanego użytkownika                            |
-| `isAuthenticated` | Czy użytkownik jest zalogowany                         |
-| `login(token)` | Loguje użytkownika, zapisuje token                         |
-| `logout()`     | Usuwa token, resetuje stan i przekierowuje na `/`          |
+| Pole / funkcja    | Opis                                              |
+| ----------------- | ------------------------------------------------- |
+| `user`            | Obiekt zalogowanego użytkownika                   |
+| `isAuthenticated` | Czy użytkownik jest zalogowany                    |
+| `login(token)`    | Loguje użytkownika, zapisuje token                |
+| `logout()`        | Usuwa token, resetuje stan i przekierowuje na `/` |
 
 ➡️ Szczegóły w `context.md`
 
