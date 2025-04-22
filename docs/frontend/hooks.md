@@ -105,3 +105,82 @@ const { user, isAuthenticated, login, logout } = useAuth();
 - `components.md` – opis komponentów korzystających z hooków
 - `task_flow.md` – opis cyklu życia edycji zadania
 - `context.md` – opis `useAuth()` i logiki kontekstowej
+
+---
+
+## 🧠 Rozszerzenia hooka `useTaskCardState.js` po aktualizacjach
+
+Hook `useTaskCardState()` został rozszerzony o nowe funkcjonalności powiązane z obsługą:
+
+### ✳️ Zamykania zadania przez AI (`closeWithAi`, `closeWithoutAI`)
+
+- `closeWithAi(force = false)` – wysyła podsumowanie do endpointu `/tasks/:id/ai-close`
+  - jeśli AI odrzuci podsumowanie (kod błędu `AI_REJECTED`), ustawiany jest `aiSummaryError`, co powoduje wyświetlenie modala z potwierdzeniem
+- `closeWithoutAI()` – wysyła podsumowanie bez udziału AI (`/tasks/:id/close`)
+- `aiSummary`, `setAiSummary` – lokalny stan wprowadzonego podsumowania
+- `aiSummaryError`, `setAiSummaryError` – komunikaty błędów związanych z AI
+- `isClosingWithAI`, `setIsClosingWithAI` – kontrola widoczności dymka z podsumowaniem
+
+### 🧠 Obsługa usuwania zadania (`deleteTask`)
+
+- `deleteTask()` – wysyła `DELETE /tasks/:id`, a po sukcesie wywołuje `onTaskDeleted(taskId)`
+- Pozwala na trwałe usunięcie zadania z backendu oraz interfejsu
+
+### 📥 Synchronizacja po aktualizacji
+
+- Po każdej operacji zapisu, zamknięcia lub usunięcia wykonywany jest `refetchTask()`, czyli ponowne pobranie zadania przez `GET /tasks/:id`
+- Zapewnia to spójność danych nawet po walidacji AI lub manualnym zapisie
+
+---
+
+## 📄 Zaktualizowane API hooka (pełna lista)
+
+```js
+const {
+  // Terminy i trudność
+  dueDate,
+  difficulty,
+  setDueDate,
+  setDifficulty,
+  saveDueDate,
+  saveDifficulty,
+
+  // Flagi i statusy
+  isSaving,
+  showSaved,
+  hasChanges,
+
+  // AI i podsumowania
+  aiSummary,
+  setAiSummary,
+  aiSummaryError,
+  setAiSummaryError,
+  isClosingWithAI,
+  setIsClosingWithAI,
+  closeWithAi,
+  closeWithoutAI,
+
+  // Usuwanie
+  deleteTask,
+
+  // Pomocnicze
+  saveAll,
+  cancelChanges,
+  refetchTask,
+  cardRef,
+  isFocused,
+  setIsFocused,
+} = useTaskCardState({ task, onTaskUpdated, onTaskDeleted });
+```
+
+---
+
+## 🔗 Powiązane komponenty (rozszerzone)
+
+- `CloseWithAiBox.jsx` – pole edycji podsumowania AI
+- `AiSummaryRejectedModal.jsx` – modal potwierdzający zamknięcie mimo odrzucenia przez AI
+- `SimilarTasksPopup.jsx` – dymek pokazujący zadania z `similarTasks[]`
+- `TaskCardSummary.jsx` – prezentacja pola `summary` i `closedAt`
+- `TaskCardView.jsx` – kontroluje widoczność wszystkich wyżej wymienionych
+
+---

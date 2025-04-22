@@ -152,3 +152,86 @@ Celem dokumentu jest zbudowanie kompletnego obrazu sposobu działania warstwy za
 - `routes.md` – dostępność tras
 - `validators.md` – reguły sprawdzające dane wejściowe
 - `project_overview.md`, `backend_overview.md` – warstwa architektury
+
+---
+
+## 8️⃣ Zamykanie zadania z wymuszeniem (`PATCH /api/tasks/:id/close` z `summary`)
+
+### Scenariusz:
+
+- Użytkownik wpisuje własne podsumowanie, które zostało **odrzucone przez AI**
+- Pojawia się modal (`AiSummaryRejectedModal`) z pytaniem:
+  "Czy chcesz mimo to zapisać podsumowanie?"
+- Po kliknięciu „Zapisz mimo to”, wysyłany jest `PATCH /tasks/:id/close`
+
+### Frontend:
+
+- W hooku `useTaskCardState`:
+  - ustawiany jest `aiSummaryError` z komunikatem AI
+  - po zatwierdzeniu `closeWithoutAI()` wykonuje zapytanie bez `force`
+
+### Backend:
+
+- `closeTaskManually()` sprawdza:
+  - czy `summary` istnieje i ma min. 10 znaków
+- Zapisuje `status: "closed"`, `closedAt`, `summary`
+
+---
+
+## 9️⃣ Podgląd podobnych zadań (`similarTasks[]`)
+
+### Scenariusz:
+
+- Zadanie posiada pole `similarTasks` (referencje do innych zakończonych zadań)
+- W `TaskCardView` pojawia się przycisk „🧠 Podobne (X)”
+
+### Frontend:
+
+- Po kliknięciu rozwijany jest `SimilarTasksPopup`:
+  - wyświetla: `title`, `description`, `summary`, `createdAt`, `closedAt`
+  - dane pochodzą z pola zpopulowanego `similarTasks[]`
+
+### Backend:
+
+- `getTaskById()` zawiera `.populate('similarTasks', 'title description summary closedAt createdAt')`
+- Dane są dostępne natywnie w obiekcie `task`
+
+---
+
+## 🔥 🔟 Usuwanie zadania (`DELETE /api/tasks/:id`)
+
+### Scenariusz:
+
+- Użytkownik klika 🗑️ „Usuń” w `TaskCard`
+- Musi potwierdzić operację (`confirm(...)`)
+- Zadanie znika z listy
+
+### Frontend:
+
+- Hook `useTaskCardState` zawiera `deleteTask()`
+- Po sukcesie uruchamiane jest `onTaskDeleted(taskId)` → usuwa lokalnie
+
+### Backend:
+
+- `deleteTask()` sprawdza `ownerId`
+- Jeśli zadanie istnieje, usuwa przez `Task.deleteOne({ _id })`
+
+---
+
+## 🧠 Nowe elementy UI i logiki
+
+- `CloseWithAiBox` – dymek z polem podsumowania AI
+- `AiSummaryRejectedModal` – modal z opcją wymuszenia
+- `TaskCardSummary` – prezentacja `summary` + `closedAt`
+- `SimilarTasksPopup` – dymek z podobnymi zadaniami
+- `deleteTask()` – obsługa trwałego usuwania zadania
+
+---
+
+## 🛠️ Synchronizacja i refetch
+
+- Po każdej operacji zapisu (`PATCH`, `ai-close`, `close`, `delete`) wykonywany jest `GET /tasks/:id`
+- Zapewnia to spójność stanu, eliminację błędów „nieodświeżonych” danych
+- Refetch znajduje się wewnątrz `useTaskCardState`, wywoływany automatycznie
+
+---

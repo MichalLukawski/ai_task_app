@@ -132,3 +132,75 @@ Zapisuje zaszyfrowany klucz OpenAI w bazie danych (`ApiKey`).
 - Wszystkie kontrolery są modularne, eksportują pojedyncze funkcje (`createWithAI`, `closeWithAI`, itd.)
 - Błędy są obsługiwane globalnie przez middleware `errorHandler`
 - Model `Task` jest centralnym zasobem zarządzanym przez AI i użytkownika
+
+---
+
+### PATCH /api/tasks/:id/close (aktualizacja – ręczne zamknięcie)
+
+Od wersji 2025-04 endpoint obsługuje także ręczne zamykanie zadania przez użytkownika, który zdecydował się zapisać podsumowanie mimo jego odrzucenia przez AI.
+
+- Wymaga: `summary` (tekst podsumowania zadania, min. 10 znaków)
+- Walidacja:
+  - jeśli `summary.length < 10` → zwraca błąd 400
+- Efekty:
+  - ustawiane `status: 'closed'`
+  - `summary` zapisywane do zadania
+  - `closedAt` = data wykonania operacji
+
+---
+
+### PATCH /api/tasks/:id/close-copy (nowy)
+
+Kopiuje podsumowanie (`summary`) z innego zakończonego zadania (`sourceTaskId`) i przypisuje do aktualnego.
+
+- Wymaga: `sourceTaskId`
+- Pobiera `summary` z podanego zadania
+- Jeśli źródłowe zadanie nie ma `summary`, operacja jest blokowana
+- Zastosowanie: masowe zamykanie zadań przez AI przez referencję
+
+---
+
+### DELETE /api/tasks/:id (NOWY)
+
+Usuwa zadanie na stałe z bazy danych.
+
+- Wymaga: uwierzytelnienia i właścicielstwa zadania (`task.ownerId === req.user.id`)
+- Po stronie backendu:
+  - Sprawdzenie istnienia zadania
+  - Usunięcie przez `Task.deleteOne({ _id })`
+- Po stronie frontend:
+  - użytkownik musi potwierdzić operację (`confirm(...)`)
+  - po sukcesie: `onTaskDeleted(taskId)`
+
+---
+
+### GET /api/tasks/:id
+
+Został rozbudowany o:
+
+- `populate('similarTasks')`
+- Zwraca pełne dane powiązanych zadań: `title`, `description`, `summary`, `createdAt`, `closedAt`
+
+---
+
+## 🧠 Rozszerzenie middleware `aiSummaryService.js`
+
+### processTaskClosure()
+
+- Funkcja waliduje podsumowanie (`summary`) dostarczone przez użytkownika
+- Wysyła zapytanie do AI w celu oceny jakości podsumowania (`getSummaryAssessment`)
+- Jeśli `force = false` i AI zwróci wynik "error" → rzuca wyjątek `AI_REJECTED`
+- Funkcja może zwrócić „ulepszoną” wersję podsumowania (poprawioną stylistycznie)
+
+---
+
+## 🆕 Nowe funkcje eksportowane przez `taskController.js`
+
+| Funkcja               | Opis                                             |
+| --------------------- | ------------------------------------------------ |
+| `closeTaskManually`   | Ręczne zapisanie `summary`, z walidacją długości |
+| `closeTaskFromSource` | Zamykanie na podstawie `sourceTaskId`            |
+| `deleteTask`          | Trwałe usunięcie zadania                         |
+| `getTaskById`         | Zwraca zadanie z zpopulowanymi `similarTasks`    |
+
+---

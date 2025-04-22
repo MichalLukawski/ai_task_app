@@ -4,6 +4,30 @@ Poniżej przedstawiono **zmiany backendowe** w projekcie AI Task App prowadzonym
 
 ---
 
+## [0.0.15] – 2025-04-18
+
+### ✨ Ogólne zmiany w monorepo (frontend + backend)
+
+- Rozbudowa modelu `Task`:
+  - Dodano pola: `summary`, `closedAt`, `status`, `similarTasks[]`
+  - Obsługa zamykania zadania:
+    - przez AI (`PATCH /tasks/:id/ai-close`)
+    - ręcznie (`PATCH /tasks/:id/close`)
+    - kopiowanie z innego (`PATCH /tasks/:id/close-copy`)
+- Nowe komponenty i logika frontendowa:
+  - `CloseWithAiBox` – dymek do wpisania podsumowania
+  - `AiSummaryRejectedModal` – modal do potwierdzenia zapisu mimo odrzucenia AI
+  - `SimilarTasksPopup` – komponent z listą podobnych zadań
+  - `TaskCardSummary` – prezentacja podsumowania i daty zamknięcia
+- Obsługa podobnych zadań (`similarTasks[]`):
+  - backend: `.populate()` w `getTaskById`
+  - frontend: toggle i render komponentu z danymi
+- Trwałe usuwanie zadania (`DELETE /api/tasks/:id`) z potwierdzeniem po stronie UI
+- Refetch `GET /tasks/:id` po zapisie, AI-close, close, delete
+- Obsługa błędów AI (`AI_REJECTED`) z przejęciem logiki i wymuszeniem zapisu przez użytkownika
+
+---
+
 ## [0.0.14] – 2025-04-17
 
 ### 🔧 Backend – synchronizacja i refaktoryzacja API

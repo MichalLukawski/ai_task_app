@@ -20,6 +20,24 @@ Wszystkie odpowiedzi API zwracają jednolity format JSON (zdefiniowany w `utils/
 
 ## 🧠 Trasy: `taskRoutes.js`
 
+> 🔐 Wszystkie poniższe trasy wymagają tokena JWT (`auth.js`).  
+> 📁 Dotyczą modelu `Task` oraz powiązanych operacji AI, podsumowań, podobieństwa, usuwania.
+
+| Metoda | Ścieżka                     | Opis                                                           | Middleware                                     |
+| ------ | --------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| POST   | `/api/tasks`                | Tworzy nowe zadanie ręcznie                                    | `auth`, `validateTaskInput`, `validate`        |
+| POST   | `/api/tasks/ai-create`      | Tworzy zadanie z pomocą GPT-4o                                 | `auth`, `validateCreateTaskWithAI`, `validate` |
+| GET    | `/api/tasks`                | Pobiera wszystkie zadania użytkownika                          | `auth`                                         |
+| GET    | `/api/tasks/:id`            | Pobiera jedno zadanie z pełnymi `similarTasks[]`               | `auth`                                         |
+| PATCH  | `/api/tasks/:id`            | Częściowo aktualizuje dane zadania                             | `auth`, `validateUpdateTaskInput`, `validate`  |
+| PATCH  | `/api/tasks/:id/ai-close`   | Zamyka zadanie z pomocą AI i waliduje podsumowanie             | `auth`                                         |
+| PATCH  | `/api/tasks/:id/close`      | Ręcznie zamyka zadanie na podstawie wprowadzonego `summary`    | `auth`                                         |
+| PATCH  | `/api/tasks/:id/close-copy` | Zamyka zadanie kopiując `summary` z innego zamkniętego zadania | `auth`                                         |
+| DELETE | `/api/tasks/:id`            | Trwale usuwa zadanie przypisane do użytkownika                 | `auth`                                         |
+
+> 🧠 Trasy `/ai-...` korzystają z `aiSummaryService.js`, `gptService.js` oraz `embeddingService.js` do oceny i transformacji podsumowań.
+> 🔁 Zmodyfikowane zadania są natychmiast odświeżane na froncie (refetch przez `useTaskCardState()`).
+
 Wszystkie poniższe trasy są chronione i wymagają tokena JWT (`auth.js`).
 
 | Metoda | Ścieżka                   | Opis                                                          | Middleware                                       |
@@ -62,7 +80,7 @@ Wszystkie poniższe trasy są chronione i wymagają tokena JWT (`auth.js`).
 
 - Dodanie paginacji i filtrowania do `GET /api/tasks`
 - Endpoint `GET /api/system/openai-key` do odczytu aktualnego klucza
-- Endpoint `DELETE /api/tasks/:id` (brak w obecnej wersji)
-- Endpoint `POST /api/tasks/:id/similar` do generowania podobnych zadań
+- Endpoint `POST /api/tasks/:id/similar` do generowania nowych podobnych zadań (AI)
+- Osobny endpoint do usuwania zadań do kosza (a nie permanentnie)
 
 ---

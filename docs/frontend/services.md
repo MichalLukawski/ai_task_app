@@ -169,3 +169,94 @@ export const aiCloseTask = async (id, summary) => {
 - `pages.md` – które widoki wykorzystują jakie funkcje
 - `routing.md` – dostępność tras dla różnych funkcji API
 - `env.md` – zmienna `VITE_API_URL` jako źródło bazowego adresu
+
+---
+
+## 🧠 Aktualizacje usług (stan na 2025-04)
+
+### 🔧 Nowe funkcje dla zadań (`taskService.js`)
+
+- `deleteTask(id)`  
+  Wysyła `DELETE /api/tasks/:id` i usuwa zadanie z bazy danych. Zwraca potwierdzenie z backendu.  
+  **Użycie:** wykorzystywane przy kliknięciu `🗑️ Usuń` w komponencie `TaskCard`.
+
+- `getTaskById(id)`  
+  Wysyła `GET /api/tasks/:id` z nagłówkiem autoryzacji. Dane zwracane zawierają również `similarTasks[]`, `summary`, `closedAt`.  
+  **Użycie:** automatyczne odświeżenie danych po zapisie AI lub edycji pól.
+
+- `updateTaskField(id, field, value)`  
+  Uniwersalna funkcja do aktualizacji pojedynczego pola (`dueDate`, `difficulty`, itp.)  
+  Przykład: `updateTaskField(id, "difficulty", 3)`
+
+- `aiCloseTask(id, summary, force = false)`  
+  Rozszerzona wersja obsługi zamykania AI:
+
+  - `force = false` → ocena AI
+  - `force = true` → wymuszenie zapisu podsumowania mimo odrzucenia przez AI
+
+- `manualCloseTask(id, summary)`  
+  Wysyła `PATCH /api/tasks/:id/close` z polem `summary`.  
+  Stosowane gdy użytkownik zatwierdza podsumowanie mimo ostrzeżenia AI.
+
+---
+
+### 📁 Propozycja aktualnej struktury `services/`
+
+```
+services/
+├── api.js             # konfiguracja axios, nagłówki, token
+├── authService.js     # logowanie, rejestracja
+├── taskService.js     # zarządzanie zadaniami
+```
+
+---
+
+## 📘 Przykłady aktualnych funkcji w `taskService.js`
+
+```js
+// taskService.js
+import axios from "../api/axios";
+
+export const deleteTask = async (id) => {
+  return axios.delete(`/api/tasks/${id}`);
+};
+
+export const getTaskById = async (id) => {
+  const res = await axios.get(`/api/tasks/${id}`);
+  return res.data;
+};
+
+export const updateTaskField = async (id, field, value) => {
+  return axios.patch(`/api/tasks/${id}`, { [field]: value });
+};
+
+export const aiCloseTask = async (id, summary, force = false) => {
+  return axios.patch(`/api/tasks/${id}/ai-close`, { summary, force });
+};
+
+export const manualCloseTask = async (id, summary) => {
+  return axios.patch(`/api/tasks/${id}/close`, { summary });
+};
+```
+
+---
+
+## 🔗 Aktualne użycie w aplikacji
+
+| Funkcja           | Gdzie wykorzystywana                         |
+| ----------------- | -------------------------------------------- |
+| `deleteTask`      | `useTaskCardState.js` (hook), `TaskCardView` |
+| `aiCloseTask`     | `useTaskCardState` → AI box                  |
+| `manualCloseTask` | `AiSummaryRejectedModal`, `closeWithoutAI`   |
+| `getTaskById`     | `refetchTask()` po zapisie                   |
+| `updateTaskField` | `saveDueDate()`, `saveDifficulty()`          |
+
+---
+
+## 📦 Rekomendacje refaktoryzacyjne
+
+- Stworzenie `useTaskService()` jako hooka opartego o `taskService.js`
+- Wydzielenie stałych endpointów do osobnego pliku (np. `apiRoutes.js`)
+- Globalna obsługa błędów (np. `useApiErrorBoundary`)
+
+---

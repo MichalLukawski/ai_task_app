@@ -10,8 +10,8 @@ AI Task App to inteligentna aplikacja do zarządzania zadaniami technicznymi, ws
 ai-task-app/
 ├── backend/              # Serwer Express + AI + MongoDB
 ├── frontend/             # UI React + Tailwind + AuthContext
+├── docs/                 # Dokumentacja projektu
 ├── .env                  # (globalny .env dla dev servera)
-├── .gitmodules           # jeśli używane submoduły Git
 ├── README.md             # (ten plik)
 ```
 
@@ -23,7 +23,6 @@ ai-task-app/
 - Frontend: React, TailwindCSS v4, Vite, JWT (localStorage)
 - Komunikacja: REST API (`/api/...`), autoryzacja tokenem
 - Styl: Prettier, modularny podział katalogów
-- Monorepo: wspólna konfiguracja `npm run dev`
 
 ---
 
@@ -56,38 +55,21 @@ npm run dev
 - Backend: `backend/.env`
 - Frontend: `frontend/.env`
 
-Pełna dokumentacja:
-
-- [`env.md`](./docs/backend/env.md)
-- [`env_FULL.md`](./docs/frontend/env.md)
-
 ---
 
 ## 📄 Dokumentacja
 
-Dokumentacja projektu znajduje się w katalogu `docs/` (lub jako repozytorium Notion/Obsidian/Markdown).
+Główna dokumentacja: `docs/`  
+Szczegółowe README:
 
-Główne pliki:
-
-- `frontend_README_FULL.md` – architektura frontendu
-- `backend_README_FULL.md` – architektura backendu
-- `api_spec.md` – endpointy REST API
-- `auth_flow_FULL.md` – pełen przepływ sesji/logowania
-- `services.md`, `controllers.md`, `middleware.md`
-- `vite_setup.md`, `ui_structure.md`, `src.md`
-
----
-
-## 👨‍💻 Autorzy i współtwórcy
-
-- Projekt prowadzony jednoosobowo
-- Architektura dokumentowana jako część pracy inżynierskiej / rozwojowej
+- [`backend/README.md`](../backend/README.md)
+- [`frontend/README.md`](../frontend/README.md)
 
 ---
 
 ## 📌 Status
 
-- ✅ Backend w pełni funkcjonalny
-- ✅ Frontend: logowanie, rejestracja, sesja, widok użytkownika
+- ✅ Backend w pełni funkcjonalny (AI, sesje, zadania, walidacja)
+- ✅ Frontend: logowanie, rejestracja, obsługa zadań, AI, zamykanie
 - 🧠 Integracja z AI działa (GPT-4o + embeddingi)
-- 🧱 Trwa porządkowanie dokumentacji + planowanie panelu admina
+- 🧱 Dokumentacja aktualizowana – zgodna z wersją 0.0.15

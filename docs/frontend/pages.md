@@ -128,3 +128,77 @@ pages/
 - `task_flow.md` – szczegółowy przebieg tworzenia i obsługi zadania
 - `context.md` – logika uwierzytelniania (`useAuth`)
 - `hooks.md` – zarządzanie stanem edycji zadań
+
+---
+
+## 🔄 Aktualizacje funkcjonalne – DashboardPage (2025-04)
+
+### ✅ Zakładki: Your Tasks / Closed Tasks
+
+DashboardPage posiada teraz dwa tryby widoku zadań:
+
+- **Your Tasks** – zawiera zadania o `status !== 'closed'`
+- **Closed Tasks** – pokazuje tylko zadania zamknięte (`status === 'closed'`)
+- Domyślnie aktywna zakładka to `Your Tasks`, przełączana przyciskiem UI
+
+### ✅ Sortowanie zadań
+
+- Zadania otwarte (`Your Tasks`) są sortowane priorytetowo:
+  - Najpierw po `dueDate` rosnąco (jeśli istnieje)
+  - Następnie po `createdAt` malejąco
+- Zadania zamknięte są sortowane po `closedAt` malejąco (najświeższe na górze)
+
+### ✅ Obsługa aktualizacji i usuwania zadań
+
+- `handleTaskUpdated(updatedTask)` – aktualizuje zadanie w stanie `tasks`
+- `handleTaskDeleted(taskId)` – usuwa zadanie z listy lokalnie po `DELETE`
+
+### ✅ Obsługa podsumowania AI
+
+- Każda karta zadania (`TaskCard`) może być zamknięta z użyciem AI
+- Podsumowanie jest oceniane i przetwarzane przez backend (GPT)
+- W przypadku odrzucenia użytkownik ma opcję „Zapisz mimo to”
+
+### ✅ Przegląd podobnych zadań
+
+- `TaskCard` może wyświetlać przycisk 🧠 „Podobne (X)”
+- Kliknięcie rozwija `SimilarTasksPopup`, który wyświetla listę `title`, `description`, `summary`, `createdAt`, `closedAt` każdego powiązanego zadania
+
+### ✅ Usuwanie zadań
+
+- Każde zadanie (otwarte lub zamknięte) może zostać usunięte permanentnie
+- Wymaga potwierdzenia `confirm(...)`
+- Wywołuje `DELETE /tasks/:id` i usuwa zadanie lokalnie (`onTaskDeleted`)
+
+---
+
+## ⚙️ Dodatkowe informacje techniczne
+
+- Widok korzysta z hooka `useApi()` do komunikacji z backendem
+- Funkcja `fetchTasks()` jest wykonywana przy `useEffect` on mount
+- Komponenty `TaskCard` renderowane są w pętli na podstawie `sortedOpenTasks` lub `sortedClosedTasks`
+- `CreateTaskForm` znajduje się zawsze po lewej stronie (kolumna `md:col-span-1`)
+- Komponenty są rozmieszczone w układzie siatki (`grid grid-cols-1 md:grid-cols-4`)
+
+---
+
+## 🆕 Komponenty używane przez DashboardPage (po rozszerzeniu)
+
+| Komponent                | Rola                                                       |
+| ------------------------ | ---------------------------------------------------------- |
+| `TaskCard`               | Główna karta zadania                                       |
+| `CloseWithAiBox`         | UI do wprowadzenia podsumowania                            |
+| `AiSummaryRejectedModal` | Modal z pytaniem o zaakceptowanie odrzuconego podsumowania |
+| `SimilarTasksPopup`      | Panel z listą podobnych zadań                              |
+| `TaskCardSummary`        | Sekcja podsumowania i daty zamknięcia                      |
+
+---
+
+## 🧭 Powiązane pliki
+
+- `TaskCard.jsx` – logika stanu, delegowanie do `TaskCardView`
+- `TaskCardView.jsx` – UI przycisków, dymków, modali
+- `hooks/useTaskCardState.js` – zapis, AI, usuwanie, synchronizacja
+- `api/tasks/:id` (GET, PATCH, DELETE) – obsługiwane przez DashboardPage
+
+---

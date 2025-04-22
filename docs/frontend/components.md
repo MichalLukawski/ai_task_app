@@ -154,3 +154,61 @@ Rozróżnia pola klikane od kliknięcia w kartę dzięki klasie `editable-field`
 - `hooks.md` – logika `useTaskCardState()`
 - `TaskCard.md` – dokumentacja szczegółowa komponentu `TaskCard`
 - `api-integration.md` – integracja komunikacji frontend-backend
+
+---
+
+## 🧠 Nowe i zaktualizowane komponenty (2025-04)
+
+### 🔹 CloseWithAiBox.jsx
+
+**Opis:**  
+Wyświetla pole tekstowe i przyciski `Zapisz` / `Anuluj` umożliwiające wprowadzenie podsumowania AI. Obsługuje tymczasowe przechowywanie treści i reaguje na błędy walidacji AI.
+
+**Zależności:** `useTaskCardState`, `textarea`, `props.value`, `props.onSave`, `props.error`, `props.isSaving`
+
+---
+
+### 🔹 AiSummaryRejectedModal.jsx
+
+**Opis:**  
+Modal prezentowany, gdy AI odrzuci wprowadzone podsumowanie (`code === 'AI_REJECTED'`). Użytkownik może zaakceptować mimo to (`onConfirm`) lub wrócić do edycji (`onCancel`).
+
+**Zależności:** `Dialog`, `props.onConfirm`, `props.onCancel`
+
+---
+
+### 🔹 TaskCardSummary.jsx
+
+**Opis:**  
+Odpowiedzialny za prezentację podsumowania (`summary`) oraz daty zamknięcia (`closedAt`) dla zadania o statusie `closed`.
+
+**Zależności:** `formatDate`, `props.summary`, `props.closedAt`
+
+---
+
+### 🔹 SimilarTasksPopup.jsx
+
+**Opis:**  
+Dymek rozwijany z poziomu karty zadania, który prezentuje zadania z `similarTasks[]`. Pokazuje tytuł, opis, podsumowanie oraz daty utworzenia i zamknięcia. Wspiera przewijanie i zamykanie.
+
+**Zależności:** `formatDate`, `props.tasks`, `props.onClose`, `tailwind scroll`, `overflow-auto`
+
+---
+
+## 📌 Dodatkowe zależności i standardy
+
+- Komponenty współdziałają z hookiem `useTaskCardState`
+- Komponenty AI oraz podobnych zadań są renderowane warunkowo w `TaskCardView`
+- Wszystkie komponenty respektują styl `editable-field` (wyjątek z zamykania przy kliknięciu)
+- Wprowadzono logiczne separacje komponentów zgodnie z zasadą Single Responsibility
+- Zredukowano wcześniejsze komponenty zbiorcze (`TaskCardEdit`) na rzecz bardziej granularnych
+
+---
+
+## 📦 Rekomendacje zarządzania komponentami
+
+- Rozważyć dalszą separację komponentów stanu i widoku
+- Wprowadzić testy jednostkowe dla komponentów modalnych (`AiSummaryRejectedModal`)
+- Wprowadzić dynamiczne importy (code splitting) dla komponentów dymków/modalnych
+
+---

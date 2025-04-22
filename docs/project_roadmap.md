@@ -130,3 +130,40 @@ Każdy etap zawiera podsumowanie wykonanych działań, uzasadnienie techniczne o
 - `api_spec.md` – aktualna specyfikacja endpointów
 - `project_overview.md`, `task_flow.md`, `auth_flow.md`
 - `CHANGELOG.md` – zmiany wersji backendu
+
+---
+
+## Etap 9 – Zamykanie zadania ręcznie, podobne zadania, usuwanie (ukończony)
+
+- Dodanie obsługi podsumowania ręcznego:
+  - modal z pytaniem „Czy zapisać mimo to?” jeśli AI odrzuci
+  - endpoint `PATCH /tasks/:id/close` z walidacją `summary.length >= 10`
+- Umożliwienie kopiowania `summary` z innego zadania (`sourceTaskId`)
+  - endpoint `PATCH /tasks/:id/close-copy`
+- Dodanie pełnej obsługi `similarTasks`:
+  - `populate` w `GET /tasks/:id`
+  - komponent `SimilarTasksPopup.jsx` w karcie zadania
+- Trwałe usuwanie zadania (`DELETE /api/tasks/:id`)
+  - UI z `confirm(...)` i aktualizacja listy przez `onTaskDeleted`
+
+Rozszerzenia frontend:
+
+- Nowe komponenty: `AiSummaryRejectedModal`, `CloseWithAiBox`, `SimilarTasksPopup`, `TaskCardSummary`
+- Nowe pola modelu: `closedAt`, `summary` jako wymagane po zamknięciu
+- Rozszerzony hook `useTaskCardState` (AI, błędy, force, delete)
+- Refetch `GET /tasks/:id` po każdej zmianie (zapis/AI/close/delete)
+
+---
+
+## Etap 10 – Planowane (kontynuacja)
+
+- Kosz (`soft delete` → `trash` + `restore`)
+- Historia zmian (`audit log`)
+- Panel podobnych zadań z opcją „Zamknij podobnie”
+- Widok statystyk zamknięć (`czas`, `trudność`, `źródło zamknięcia`)
+- Zarządzanie kluczami OpenAI i parametrami (tokeny, tryb pracy AI)
+- Wprowadzenie funkcji "komentarze do zadań"
+- Notyfikacje (np. zadanie zbliża się do `dueDate`)
+- Obsługa wielu użytkowników i ról (`admin`, `viewer`, `member`)
+
+---

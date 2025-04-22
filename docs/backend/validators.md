@@ -59,6 +59,17 @@ Zamykanie zadania z pomocą AI (`PATCH /api/tasks/:id/ai-close`).
 
 ---
 
+## ✏️ validateCloseTaskManually
+
+**Do czego służy:**  
+Zamykanie zadania z pomocą ręcznego podsumowania wprowadzonego przez użytkownika (`PATCH /api/tasks/:id/close`).
+
+**Walidacja:**
+
+- `summary` – **wymagane**, min. 10 znaków
+
+---
+
 ## ✏️ validateCloseTaskFromOther
 
 **Do czego służy:**  

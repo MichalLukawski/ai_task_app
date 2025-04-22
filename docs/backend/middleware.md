@@ -122,3 +122,50 @@ router.patch(
 - Dodanie `middleware/requireAdmin.js` do kontroli ról
 - Middleware `logger.js` do rejestrowania zapytań i odpowiedzi
 - Obsługa limitów zapytań (`rate-limiting`) na poziomie middleware
+
+---
+
+## 🆕 Nowe i potwierdzone zastosowania middleware (2025-04)
+
+### 🔄 Nowe ścieżki z użyciem middleware
+
+| Endpoint                          | auth.js | validate.js | Uwagi                                                |
+| --------------------------------- | ------- | ----------- | ---------------------------------------------------- |
+| `PATCH /api/tasks/:id/ai-close`   | ✅      | ❌          | Brak walidatora, sprawdzane w `processTaskClosure()` |
+| `PATCH /api/tasks/:id/close`      | ✅      | ✅          | Używa nowego walidatora `validateCloseTaskManually`  |
+| `PATCH /api/tasks/:id/close-copy` | ✅      | ✅          | Używa `validateCloseTaskFromOther`                   |
+| `DELETE /api/tasks/:id`           | ✅      | ❌          | Nie wymaga `body`, więc nie potrzebuje walidatora    |
+
+> Wszystkie te trasy zabezpieczone są `auth.js`, a niektóre z nich używają dodatkowych reguł walidacyjnych przez `validate.js`.
+
+---
+
+## 🔍 Opis `handleTryCatch` (z `utils/responseHandler.js`)
+
+Choć nie znajduje się bezpośrednio w folderze `middleware/`, funkcjonuje jako _asynchroniczny middleware typu wrapper_.
+
+**Działanie:**
+
+- Obejmuje każdy `async`-handler kontrolera
+- Automatycznie przechwytuje błędy i przekazuje je do obsługi błędów globalnych
+
+**Przykład:**
+
+```js
+router.patch(
+  "/:id/ai-close",
+  auth,
+  handleTryCatch(taskController.closeTaskWithAI)
+);
+```
+
+---
+
+## ✅ Utrzymane dobre praktyki
+
+- Middleware są **kompozycyjnie stosowane** w każdej trasie.
+- `validate.js` gwarantuje jednolite formaty komunikatów błędów.
+- Brak powtórzonej logiki walidacyjnej w kontrolerach – całość delegowana do middleware.
+- Każda trasa zabezpieczona JWT (brak tras publicznych w `/api/tasks`).
+
+---

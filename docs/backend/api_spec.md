@@ -169,6 +169,24 @@ Zamyka zadanie z pomocą AI.
 
 ### PATCH /api/tasks/:id/close
 
+Zamyka zadanie ręcznie, zapisując `summary` dostarczone przez użytkownika. Ten endpoint jest używany:
+
+- w sytuacji gdy AI odrzuci zaproponowane podsumowanie (walidacja semantyczna)
+- lub gdy użytkownik wprost chce wprowadzić własne podsumowanie bez użycia AI
+
+**Body:**
+
+```json
+{
+  "summary": "Opis rozwiązania problemu z wykrywaniem nieautoryzowanego tokenu."
+}
+```
+
+**Response:** `200 OK` lub `400 Bad Request`
+
+> Jeśli `summary` ma mniej niż 10 znaków – operacja zostaje odrzucona z błędem walidacji.
+> Po zatwierdzeniu ustawiany jest `status: "closed"`, `closedAt`, `summary`.
+
 Zamyka zadanie kopiując `summary` z innego zakończonego zadania.
 
 **Body:**
@@ -240,6 +258,24 @@ Zapisuje klucz OpenAI.
 - Wszystkie endpointy (poza `/auth`) wymagają tokena JWT
 - Embeddingi są generowane automatycznie po utworzeniu zadania
 - `similarTasks` i `embedding` nie są modyfikowalne ręcznie
+
+---
+
+### DELETE /api/tasks/:id
+
+Usuwa zadanie permanentnie z bazy. Użytkownik musi być właścicielem zadania (`ownerId === req.user.id`).
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Task permanently deleted."
+}
+```
+
+> Endpoint wymaga autoryzacji. Brak potwierdzenia w protokole – odpowiedzialność po stronie UI (np. confirm()).
+> Brak wersji "koszowej" – usunięcie jest nieodwracalne.
 
 ---
 
